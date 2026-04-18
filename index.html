@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>🔊 Test Audio + Imagen</title>
+<title>Cuentos de Buenas Noches 🌙</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
@@ -12,105 +12,125 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet"/>
 <style>
-  body { margin:0; font-family: system-ui, -apple-system, sans-serif; }
-  .font-serif { font-family: Georgia, serif; }
-  .animate-pulse { animation: pulse 2s cubic-bezier(.4,0,.6,1) infinite; }
-  .animate-spin  { animation: spin 1s linear infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-  @keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-  .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-  select { background-color:#fff; }
+body{margin:0;font-family:system-ui,-apple-system,sans-serif}
+.font-serif{font-family:Georgia,serif}
+.animate-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}
+.animate-spin{animation:spin 1s linear infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+select{background:#fff}
 </style>
 </head>
 <body>
 <div id="root"></div>
-
 <script type="text/babel">
-const { useState, useEffect, useRef } = React;
+const{useState,useEffect,useRef}=React;
 
-// ── Firebase ──────────────────────────────────────────────────────────────────
 firebase.initializeApp({
-  apiKey: "AIzaSyAzmwm7dbFePYzd0fBx9ryQdjfL_HqXTyY",
-  authDomain: "cuentos-historias.firebaseapp.com",
-  projectId: "cuentos-historias",
-  storageBucket: "cuentos-historias.firebasestorage.app",
-  messagingSenderId: "91791264428",
-  appId: "1:91791264428:web:8c2d31cb0631beffed2d09"
+  apiKey:"AIzaSyAzmwm7dbFePYzd0fBx9ryQdjfL_HqXTyY",
+  authDomain:"cuentos-historias.firebaseapp.com",
+  projectId:"cuentos-historias",
+  storageBucket:"cuentos-historias.firebasestorage.app",
+  messagingSenderId:"91791264428",
+  appId:"1:91791264428:web:8c2d31cb0631beffed2d09"
 });
-const auth = firebase.auth();
-const db   = firebase.firestore();
-const ADMIN_UID = "wckbwmRajrRwKPGczB26V5g1XzP2";
+const auth=firebase.auth();
+const db=firebase.firestore();
+const ADMIN_UID="wckbwmRajrRwKPGczB26V5g1XzP2";
 
-// ── APIs ──────────────────────────────────────────────────────────────────────
-const APIS = [
-  {
-    id:"groq", name:"Groq Llama 3.3",
-    free:"14.400 req/día gratis", docsUrl:"https://console.groq.com",
-    call: async (prompt, key) => {
-      const r = await fetch("https://api.groq.com/openai/v1/chat/completions",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","Authorization":`Bearer ${key}`},
-        body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:1000,
-          messages:[{role:"user",content:prompt}]})
-      });
-      const d = await r.json();
-      if(d.error) throw new Error(d.error.message);
-      return d.choices?.[0]?.message?.content||"";
-    }
+// ── 20 APIs ───────────────────────────────────────────────────────────────────
+const APIS=[
+  {id:"groq",name:"Groq Llama 3.3",free:"14.400 req/día",url:"https://console.groq.com",
+   call:async(p,k)=>{const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"gemini",name:"Gemini 2.0 Flash",free:"1.500 req/día",url:"https://aistudio.google.com",
+   call:async(p,k)=>{const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+k,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{text:p}]}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.candidates?.[0]?.content?.parts?.[0]?.text||"";}},
+  {id:"cerebras",name:"Cerebras Llama 3.3",free:"~1.700 req/día",url:"https://cloud.cerebras.ai",
+   call:async(p,k)=>{const r=await fetch("https://api.cerebras.ai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"llama-3.3-70b",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"openrouter",name:"OpenRouter",free:"50 req/día",url:"https://openrouter.ai",
+   call:async(p,k)=>{const r=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k,"HTTP-Referer":location.origin},body:JSON.stringify({model:"meta-llama/llama-3.3-70b-instruct:free",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"mistral",name:"Mistral Small",free:"~86K req/día",url:"https://console.mistral.ai",
+   call:async(p,k)=>{const r=await fetch("https://api.mistral.ai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"mistral-small-latest",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"sambanova",name:"SambaNova Llama 3.3",free:"Free tier",url:"https://cloud.sambanova.ai",
+   call:async(p,k)=>{const r=await fetch("https://api.sambanova.ai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"Meta-Llama-3.3-70B-Instruct",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"cohere",name:"Cohere Command R",free:"1.000 req/mes",url:"https://dashboard.cohere.com",
+   call:async(p,k)=>{const r=await fetch("https://api.cohere.ai/v1/chat",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"command-r",message:p,max_tokens:1000})});const d=await r.json();if(d.message)throw new Error(d.message);return d.text||"";}},
+  {id:"deepseek",name:"DeepSeek V3",free:"Sin límite*",url:"https://platform.deepseek.com",
+   call:async(p,k)=>{const r=await fetch("https://api.deepseek.com/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"deepseek-chat",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"together",name:"Together AI",free:"$25 crédito",url:"https://api.together.ai",
+   call:async(p,k)=>{const r=await fetch("https://api.together.xyz/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"hyperbolic",name:"Hyperbolic",free:"$10 crédito",url:"https://app.hyperbolic.xyz",
+   call:async(p,k)=>{const r=await fetch("https://api.hyperbolic.xyz/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"meta-llama/Llama-3.3-70B-Instruct",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"nvidia",name:"NVIDIA NIM",free:"Créditos gratis",url:"https://build.nvidia.com",
+   call:async(p,k)=>{const r=await fetch("https://integrate.api.nvidia.com/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"meta/llama-3.3-70b-instruct",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"huggingface",name:"HuggingFace",free:"Variable",url:"https://huggingface.co/settings/tokens",
+   call:async(p,k)=>{const r=await fetch("https://api-inference.huggingface.co/models/meta-llama/Llama-3.3-70B-Instruct/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"meta-llama/Llama-3.3-70B-Instruct",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error);return d.choices?.[0]?.message?.content||"";}},
+  {id:"github",name:"GitHub Models",free:"~150 req/día",url:"https://github.com/settings/tokens",
+   call:async(p,k)=>{const r=await fetch("https://models.github.ai/inference/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"meta/Llama-3.3-70B-Instruct",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"cloudflare",name:"Cloudflare AI",free:"~300 req/día",url:"https://dash.cloudflare.com",
+   call:async(p,k)=>{const[accountId,apiToken]=k.split("|");const r=await fetch("https://api.cloudflare.com/client/v4/accounts/"+accountId+"/ai/run/@cf/meta/llama-3.3-70b-instruct-fp8-fast",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+apiToken},body:JSON.stringify({messages:[{role:"user",content:p}],max_tokens:1000})});const d=await r.json();if(d.errors&&d.errors.length)throw new Error(d.errors[0].message);return d.result&&d.result.response||"";}},
+  {id:"fireworks",name:"Fireworks AI",free:"$1 crédito",url:"https://fireworks.ai",
+   call:async(p,k)=>{const r=await fetch("https://api.fireworks.ai/inference/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"accounts/fireworks/models/llama-v3p3-70b-instruct",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"novita",name:"Novita AI",free:"Créditos gratis",url:"https://novita.ai",
+   call:async(p,k)=>{const r=await fetch("https://api.novita.ai/v3/openai/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"meta-llama/llama-3.3-70b-instruct",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"nebius",name:"Nebius AI",free:"Créditos gratis",url:"https://studio.nebius.ai",
+   call:async(p,k)=>{const r=await fetch("https://api.studio.nebius.ai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"meta-llama/Llama-3.3-70B-Instruct",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"scaleway",name:"Scaleway",free:"Free tier",url:"https://console.scaleway.com",
+   call:async(p,k)=>{const r=await fetch("https://api.scaleway.ai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"llama-3.3-70b-instruct",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"kluster",name:"Kluster AI",free:"Free tier",url:"https://kluster.ai",
+   call:async(p,k)=>{const r=await fetch("https://api.kluster.ai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},body:JSON.stringify({model:"klusterai/Meta-Llama-3.3-70B-Instruct-Turbo",max_tokens:1000,messages:[{role:"user",content:p}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices?.[0]?.message?.content||"";}},
+  {id:"puter",name:"Puter.js (sin key)",free:"Sin límite",url:"https://developer.puter.com",
+   call:async(p)=>{
+     if(!window.puter)throw new Error("Puter.js no cargado");
+     const r=await window.puter.ai.chat(p,{model:"claude-sonnet-4-5"});
+     return r&&r.message&&r.message.content?r.message.content[0].text:r||"";
+   }
   },
-  {
-    id:"gemini", name:"Gemini Flash",
-    free:"15 req/min gratis", docsUrl:"https://aistudio.google.com",
-    call: async (prompt, key) => {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
-      });
-      const d = await r.json();
-      if(d.error) throw new Error(d.error.message);
-      return d.candidates?.[0]?.content?.parts?.[0]?.text||"";
-    }
-  },
-  {
-    id:"anthropic", name:"Claude Haiku (proxy)",
-    free:"Solo via proxy", docsUrl:"https://console.anthropic.com",
-    call: async () => { throw new Error("Anthropic requiere proxy — usa Groq o Gemini"); }
-  }
 ];
 
+// Carga Puter.js de forma diferida
+const puterScript=document.createElement("script");
+puterScript.src="https://js.puter.com/v2/";
+document.head.appendChild(puterScript);
+
+// Imagen con Pollinations (sin key)
+const genImage=async(prompt)=>{
+  const p=encodeURIComponent(prompt+", children book illustration, soft watercolor, bedtime story, magical, colorful");
+  return "https://image.pollinations.ai/prompt/"+p+"?width=512&height=512&seed="+Math.floor(Math.random()*99999)+"&nologo=true";
+};
+
 // ── i18n ──────────────────────────────────────────────────────────────────────
-const LANGS = {
+const LANGS={
   es:{flag:"🇪🇸",name:"Español",
     steps:["¿Cuántos años tiene?","¿Cómo es tu peque?","¿Qué le apasiona?","¿Tipo de cuento?","¿Qué lección aprender?","Creando...","¡Listo!"],
-    subs:["Vocabulario perfecto","Pronombres adecuados","1-3 cosas que le apasionen","Tono ideal para dormir","Mensaje importante","La magia trabaja...","¡Dulces sueños!"],
+    subs:["Vocabulario perfecto","Pronombres adecuados","1-3 cosas","Tono para dormir","Mensaje importante","La magia trabaja...","¡Dulces sueños!"],
     ageLabel:"Edad (2-12)",genders:["niño","niña","otro"],
     step:"Paso",of:"de",back:"Atrás",cont:"Continuar",createBtn:"Crear cuento",again:"Nuevo cuento",sweet:"¡Dulces sueños!",
     read:"▶ Leer",pause:"⏸ Pausar",rewind:"◀◀ –20",restart:"🔁",
     save:"💾 Guardar",saved:"¡Guardado!",rate:"Tu calificación:",
     propose:"Proponer capítulo",proposePH:"Tu idea para el siguiente capítulo...",send:"Enviar",
-    pending:"Pendiente",accepted:"Aceptado",rejected:"Rechazado",
-    accept:"Aceptar",reject:"Rechazar",chapters:"Capítulos propuestos",
-    noStories:"Sin cuentos aún. ¡Crea el primero!",community:"Comunidad",create:"Crear",
+    pending:"Pendiente",accepted:"Aceptado",rejected:"Rechazado",accept:"Aceptar",reject:"Rechazar",
+    chapters:"Capítulos propuestos",noStories:"Sin cuentos aún.",community:"Comunidad",create:"Crear",
     interests:["Animales","Espacio","Océano","Dinosaurios","Magia","Deporte","Música","Arte","Naturaleza","Superhéroes","Vehículos","Cocina","Ciencia"],
-    styles:[{value:"funny",label:"Divertido",emoji:"😄",desc:"Risas"},{value:"adventurous",label:"Aventurero",emoji:"🌟",desc:"Aventuras"},{value:"gentle",label:"Tranquilo",emoji:"🌙",desc:"Relajante"},{value:"magical",label:"Mágico",emoji:"✨",desc:"Fantasía"},{value:"educational",label:"Educativo",emoji:"📚",desc:"Aprendizaje"}],
+    styles:[{v:"funny",l:"Divertido",e:"😄",d:"Risas"},{v:"adventurous",l:"Aventurero",e:"🌟",d:"Aventuras"},{v:"gentle",l:"Tranquilo",e:"🌙",d:"Relajante"},{v:"magical",l:"Mágico",e:"✨",d:"Fantasía"},{v:"educational",l:"Educativo",e:"📚",d:"Aprendizaje"}],
     lessonPH:"Ej: ser amable, compartir...",
-    prompt:(d)=>`Crea un cuento de buenas noches en español para un/a ${d.gender} de ${d.age} años que adora: ${d.interests.join(", ")}. Estilo: ${d.style}. Lección: ${d.lesson}. Final tranquilo, 300-500 palabras. Solo el texto, sin título.`,
+    imgP:(d)=>"Un "+d.gender+" de "+d.age+" años en un bosque mágico, estilo "+d.style+", "+d.interests[0],
+    prompt:(d)=>"Crea un cuento de buenas noches en español para un/a "+d.gender+" de "+d.age+" años que adora: "+d.interests.join(", ")+". Estilo: "+d.style+". Lección: "+d.lesson+". Final tranquilo, 300-500 palabras. Solo el texto, sin título.",
   },
   ca:{flag:"🔴🟡",name:"Català",
     steps:["Quants anys té?","Com és?","Què li apassiona?","Quin estil?","Quina lliçó?","Creant...","Llest!"],
-    subs:["Vocabulari perfecte","Pronoms adequats","1-3 passions","To per dormir","Missatge important","La màgia treballa...","Dolços somnis!"],
+    subs:["Vocabulari perfecte","Pronoms adequats","1-3 coses","To per dormir","Missatge important","La màgia treballa...","Dolços somnis!"],
     ageLabel:"Edat (2-12)",genders:["nen","nena","altre"],
     step:"Pas",of:"de",back:"Enrere",cont:"Continuar",createBtn:"Crear conte",again:"Nou conte",sweet:"Dolços somnis!",
     read:"▶ Llegir",pause:"⏸ Pausar",rewind:"◀◀ –20",restart:"🔁",
     save:"💾 Desar",saved:"Desat!",rate:"La teva puntuació:",
     propose:"Proposar capítol",proposePH:"La teva idea pel proper capítol...",send:"Enviar",
-    pending:"Pendent",accepted:"Acceptat",rejected:"Rebutjat",
-    accept:"Acceptar",reject:"Rebutjar",chapters:"Capítols proposats",
-    noStories:"Sense contes. Crea el primer!",community:"Comunitat",create:"Crear",
+    pending:"Pendent",accepted:"Acceptat",rejected:"Rebutjat",accept:"Acceptar",reject:"Rebutjar",
+    chapters:"Capítols proposats",noStories:"Sense contes.",community:"Comunitat",create:"Crear",
     interests:["Animals","Espai","Oceà","Dinosaures","Màgia","Esport","Música","Art","Natura","Superherois","Vehicles","Cuina","Ciència"],
-    styles:[{value:"funny",label:"Divertit",emoji:"😄",desc:"Rialles"},{value:"adventurous",label:"Aventurer",emoji:"🌟",desc:"Aventures"},{value:"gentle",label:"Tranquil",emoji:"🌙",desc:"Relaxant"},{value:"magical",label:"Màgic",emoji:"✨",desc:"Fantasia"},{value:"educational",label:"Educatiu",emoji:"📚",desc:"Aprenentatge"}],
+    styles:[{v:"funny",l:"Divertit",e:"😄",d:"Rialles"},{v:"adventurous",l:"Aventurer",e:"🌟",d:"Aventures"},{v:"gentle",l:"Tranquil",e:"🌙",d:"Relaxant"},{v:"magical",l:"Màgic",e:"✨",d:"Fantasia"},{v:"educational",l:"Educatiu",e:"📚",d:"Aprenentatge"}],
     lessonPH:"Ex: ser amable, compartir...",
-    prompt:(d)=>`Crea un conte de bona nit en català per a un/a ${d.gender} de ${d.age} anys que adora: ${d.interests.join(", ")}. Estil: ${d.style}. Lliçó: ${d.lesson}. Final tranquil, 300-500 paraules. Només el text, sense títol.`,
+    imgP:(d)=>"Un "+d.gender+" de "+d.age+" anys en un bosc màgic, estil "+d.style+", "+d.interests[0],
+    prompt:(d)=>"Crea un conte de bona nit en català per a un/a "+d.gender+" de "+d.age+" anys que adora: "+d.interests.join(", ")+". Estil: "+d.style+". Lliçó: "+d.lesson+". Final tranquil, 300-500 paraules. Només el text, sense títol.",
   },
   fr:{flag:"🇫🇷",name:"Français",
     steps:["Quel âge ?","Comment est-il/elle ?","Ses passions ?","Quel style ?","Quelle leçon ?","Création...","Prête !"],
@@ -120,13 +140,13 @@ const LANGS = {
     read:"▶ Lire",pause:"⏸ Pause",rewind:"◀◀ –20",restart:"🔁",
     save:"💾 Enregistrer",saved:"Enregistré !",rate:"Votre note :",
     propose:"Proposer chapitre",proposePH:"Ton idée pour le prochain chapitre...",send:"Envoyer",
-    pending:"En attente",accepted:"Accepté",rejected:"Refusé",
-    accept:"Accepter",reject:"Refuser",chapters:"Chapitres proposés",
-    noStories:"Pas d'histoires. Créez la première !",community:"Communauté",create:"Créer",
+    pending:"En attente",accepted:"Accepté",rejected:"Refusé",accept:"Accepter",reject:"Refuser",
+    chapters:"Chapitres proposés",noStories:"Pas d'histoires.",community:"Communauté",create:"Créer",
     interests:["Animaux","Espace","Océan","Dinosaures","Magie","Sport","Musique","Art","Nature","Super-héros","Véhicules","Cuisine","Science"],
-    styles:[{value:"funny",label:"Drôle",emoji:"😄",desc:"Rires"},{value:"adventurous",label:"Aventureux",emoji:"🌟",desc:"Aventures"},{value:"gentle",label:"Doux",emoji:"🌙",desc:"Apaisant"},{value:"magical",label:"Magique",emoji:"✨",desc:"Fantaisie"},{value:"educational",label:"Éducatif",emoji:"📚",desc:"Apprentissage"}],
+    styles:[{v:"funny",l:"Drôle",e:"😄",d:"Rires"},{v:"adventurous",l:"Aventureux",e:"🌟",d:"Aventures"},{v:"gentle",l:"Doux",e:"🌙",d:"Apaisant"},{v:"magical",l:"Magique",e:"✨",d:"Fantaisie"},{v:"educational",l:"Éducatif",e:"📚",d:"Apprentissage"}],
     lessonPH:"Ex: être gentil, partager...",
-    prompt:(d)=>`Crée une histoire du soir en français pour un/une ${d.gender} de ${d.age} ans qui adore: ${d.interests.join(", ")}. Style: ${d.style}. Leçon: ${d.lesson}. Fin calme, 300-500 mots. Seulement le texte, sans titre.`,
+    imgP:(d)=>"Un/e "+d.gender+" de "+d.age+" ans dans une forêt magique, style "+d.style+", "+d.interests[0],
+    prompt:(d)=>"Crée une histoire du soir en français pour un/une "+d.gender+" de "+d.age+" ans qui adore: "+d.interests.join(", ")+". Style: "+d.style+". Leçon: "+d.lesson+". Fin calme, 300-500 mots. Seulement le texte, sans titre.",
   },
   en:{flag:"🇬🇧",name:"English",
     steps:["How old?","About your child","What do they love?","Story style?","Lesson?","Creating...","Ready!"],
@@ -136,13 +156,13 @@ const LANGS = {
     read:"▶ Read",pause:"⏸ Pause",rewind:"◀◀ –20",restart:"🔁",
     save:"💾 Save",saved:"Saved!",rate:"Your rating:",
     propose:"Propose chapter",proposePH:"Your idea for the next chapter...",send:"Send",
-    pending:"Pending",accepted:"Accepted",rejected:"Rejected",
-    accept:"Accept",reject:"Reject",chapters:"Proposed chapters",
-    noStories:"No stories yet. Create the first!",community:"Community",create:"Create",
+    pending:"Pending",accepted:"Accepted",rejected:"Rejected",accept:"Accept",reject:"Reject",
+    chapters:"Proposed chapters",noStories:"No stories yet.",community:"Community",create:"Create",
     interests:["Animals","Space","Ocean","Dinosaurs","Magic","Sports","Music","Art","Nature","Superheroes","Vehicles","Cooking","Science"],
-    styles:[{value:"funny",label:"Funny",emoji:"😄",desc:"Giggles"},{value:"adventurous",label:"Adventurous",emoji:"🌟",desc:"Quests"},{value:"gentle",label:"Gentle",emoji:"🌙",desc:"Soothing"},{value:"magical",label:"Magical",emoji:"✨",desc:"Fantasy"},{value:"educational",label:"Educational",emoji:"📚",desc:"Learning"}],
+    styles:[{v:"funny",l:"Funny",e:"😄",d:"Giggles"},{v:"adventurous",l:"Adventurous",e:"🌟",d:"Quests"},{v:"gentle",l:"Gentle",e:"🌙",d:"Soothing"},{v:"magical",l:"Magical",e:"✨",d:"Fantasy"},{v:"educational",l:"Educational",e:"📚",d:"Learning"}],
     lessonPH:"E.g. being kind, sharing...",
-    prompt:(d)=>`Create a bedtime story in English for a ${d.age}-year-old ${d.gender} who loves: ${d.interests.join(", ")}. Style: ${d.style}. Lesson: ${d.lesson}. Calming ending, 300-500 words. Only story text, no title.`,
+    imgP:(d)=>"A "+d.gender+" aged "+d.age+" in a magical forest, style "+d.style+", "+d.interests[0],
+    prompt:(d)=>"Create a bedtime story in English for a "+d.age+"-year-old "+d.gender+" who loves: "+d.interests.join(", ")+". Style: "+d.style+". Lesson: "+d.lesson+". Calming ending, 300-500 words. Only story text, no title.",
   },
   pt:{flag:"🇵🇹",name:"Português",
     steps:["Quantos anos?","Como é?","O que adora?","Estilo?","Que lição?","A criar...","Pronta!"],
@@ -152,121 +172,106 @@ const LANGS = {
     read:"▶ Ler",pause:"⏸ Pausar",rewind:"◀◀ –20",restart:"🔁",
     save:"💾 Guardar",saved:"Guardado!",rate:"A tua avaliação:",
     propose:"Propor capítulo",proposePH:"A tua ideia para o próximo capítulo...",send:"Enviar",
-    pending:"Pendente",accepted:"Aceite",rejected:"Rejeitado",
-    accept:"Aceitar",reject:"Rejeitar",chapters:"Capítulos propostos",
-    noStories:"Sem histórias. Cria a primeira!",community:"Comunidade",create:"Criar",
+    pending:"Pendente",accepted:"Aceite",rejected:"Rejeitado",accept:"Aceitar",reject:"Rejeitar",
+    chapters:"Capítulos propostos",noStories:"Sem histórias.",community:"Comunidade",create:"Criar",
     interests:["Animais","Espaço","Oceano","Dinossauros","Magia","Desporto","Música","Arte","Natureza","Super-heróis","Veículos","Culinária","Ciência"],
-    styles:[{value:"funny",label:"Engraçado",emoji:"😄",desc:"Risos"},{value:"adventurous",label:"Aventureiro",emoji:"🌟",desc:"Aventuras"},{value:"gentle",label:"Suave",emoji:"🌙",desc:"Relaxante"},{value:"magical",label:"Mágico",emoji:"✨",desc:"Fantasia"},{value:"educational",label:"Educativo",emoji:"📚",desc:"Aprendizagem"}],
+    styles:[{v:"funny",l:"Engraçado",e:"😄",d:"Risos"},{v:"adventurous",l:"Aventureiro",e:"🌟",d:"Aventuras"},{v:"gentle",l:"Suave",e:"🌙",d:"Relaxante"},{v:"magical",l:"Mágico",e:"✨",d:"Fantasia"},{v:"educational",l:"Educativo",e:"📚",d:"Aprendizagem"}],
     lessonPH:"Ex: ser gentil, partilhar...",
-    prompt:(d)=>`Cria uma história de boa noite em português para um/a ${d.gender} de ${d.age} anos que adora: ${d.interests.join(", ")}. Estilo: ${d.style}. Lição: ${d.lesson}. Final tranquilo, 300-500 palavras. Apenas o texto, sem título.`,
+    imgP:(d)=>"Um/a "+d.gender+" de "+d.age+" anos numa floresta mágica, estilo "+d.style+", "+d.interests[0],
+    prompt:(d)=>"Cria uma história de boa noite em português para um/a "+d.gender+" de "+d.age+" anos que adora: "+d.interests.join(", ")+". Estilo: "+d.style+". Lição: "+d.lesson+". Final tranquilo, 300-500 palavras. Apenas o texto, sem título.",
   },
 };
 
-const GR = "linear-gradient(to right, #6366f1, #9333ea)";
-const grBtn = {background:GR,color:"#fff",border:"none",cursor:"pointer"};
+const GR="linear-gradient(to right,#6366f1,#9333ea)";
 
-const Stars = ({value, onChange, size=20}) => (
+// ── Stars ─────────────────────────────────────────────────────────────────────
+const Stars=({value,onChange})=>(
   <div style={{display:"flex",gap:4}}>
     {[1,2,3,4,5].map(n=>(
       <span key={n} onClick={()=>onChange&&onChange(n)}
-        style={{cursor:onChange?"pointer":"default",fontSize:size,
-          color:n<=value?"#facc15":"#d1d5db"}}>★</span>
+        style={{cursor:onChange?"pointer":"default",fontSize:22,color:n<=value?"#facc15":"#d1d5db"}}>★</span>
     ))}
   </div>
 );
 
 // ── App ───────────────────────────────────────────────────────────────────────
-function App() {
-  const [user,setUser]           = useState(null);
-  const [authReady,setAuthReady] = useState(false);
-  const [lang,setLang]           = useState("es");
-  const [view,setView]           = useState("home");
-  const [step,setStep]           = useState(0);
-  const [form,setForm]           = useState({age:"",gender:"",interests:[],style:"",lesson:""});
-  const [story,setStory]         = useState(null);
-  const [busy,setBusy]           = useState(false);
-  const [savedMsg,setSavedMsg]   = useState(false);
-  const [stories,setStories]     = useState([]);
-  const [selected,setSelected]   = useState(null);
-  const [proposal,setProposal]   = useState("");
-  const [displayed,setDisplayed] = useState("");
-  const [animating,setAnimating] = useState(false);
-  const [apiKeys,setApiKeys]     = useState({anthropic:"",gemini:"",groq:""});
-  const [apiUsage,setApiUsage]   = useState({anthropic:0,gemini:0,groq:0});
-  const [keysLoaded,setKeysLoaded]=useState(false);
-  const [adminSaved,setAdminSaved]=useState(false);
-  const [preferredApi,setPreferredApi]=useState("anthropic");
+function App(){
+  const[user,setUser]=useState(null);
+  const[authReady,setAuthReady]=useState(false);
+  const[lang,setLang]=useState("es");
+  const[view,setView]=useState("home");
+  const[step,setStep]=useState(0);
+  const[form,setForm]=useState({age:"",gender:"",interests:[],style:"",lesson:""});
+  const[story,setStory]=useState(null);
+  const[imgUrl,setImgUrl]=useState(null);
+  const[busy,setBusy]=useState(false);
+  const[savedMsg,setSavedMsg]=useState(false);
+  const[stories,setStories]=useState([]);
+  const[selected,setSelected]=useState(null);
+  const[proposal,setProposal]=useState("");
+  const[displayed,setDisplayed]=useState("");
+  const[animating,setAnimating]=useState(false);
+  const[apiKeys,setApiKeys]=useState({});
+  const[apiUsage,setApiUsage]=useState({});
+  const[keysLoaded,setKeysLoaded]=useState(false);
+  const[adminSaved,setAdminSaved]=useState(false);
+  const[preferredApi,setPreferredApi]=useState("groq");
+  const[voices,setVoices]=useState([]);
+  const[selVoice,setSelVoice]=useState("");
+  const[speaking,setSpeaking]=useState(false);
+  const animRef=useRef(null);
+  const lessonRef=useRef(null);
+  const L=LANGS[lang];
+  const isAdmin=user&&user.uid===ADMIN_UID;
 
-  const animRef   = useRef(null);
-  const lessonRef = useRef(null);
-  const [voices, setVoices]     = useState([]);
-  const [selVoice, setSelVoice] = useState("");
-  const [speaking, setSpeaking] = useState(false);
+  // Auth
+  useEffect(()=>firebase.auth().onAuthStateChanged(u=>{setUser(u);setAuthReady(true);}),[]);
 
+  // Voices
   useEffect(()=>{
-    const load = ()=>{ const v=window.speechSynthesis.getVoices(); if(v.length) setVoices(v); };
-    load();
-    window.speechSynthesis.onvoiceschanged = load;
+    const load=()=>{const v=window.speechSynthesis.getVoices();if(v.length)setVoices(v);};
+    if("speechSynthesis" in window){load();window.speechSynthesis.onvoiceschanged=load;setTimeout(load,500);}
   },[]);
 
-  const langCode = {es:"es",ca:"ca",fr:"fr",en:"en",pt:"pt"};
-  const voicesForLang = voices.filter(v=>v.lang.startsWith(langCode[lang]||"es"));
-
-  const speak = (text)=>{
-    if(!window.speechSynthesis) return;
-    if(speaking){ window.speechSynthesis.cancel(); setSpeaking(false); return; }
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.rate = 0.88; utt.pitch = 1.05;
-    const chosen = voices.find(v=>v.voiceURI===selVoice) || voicesForLang[0];
-    if(chosen) utt.voice = chosen;
-    utt.onend = ()=>setSpeaking(false);
-    utt.onerror = ()=>setSpeaking(false);
-    window.speechSynthesis.speak(utt);
-    setSpeaking(true);
-  };
-  const L = LANGS[lang];
-  const isAdmin = user?.uid===ADMIN_UID;
-
-  useEffect(()=>firebase.auth().onAuthStateChanged(u=>{setUser(u);setAuthReady(true)}),[]);
-
+  // Load admin keys
   useEffect(()=>{
-    if(!user||!isAdmin||keysLoaded) return;
+    if(!user||!isAdmin||keysLoaded)return;
     db.doc("config/apikeys").get().then(snap=>{
       if(snap.exists){
         const d=snap.data();
-        setApiKeys({anthropic:d.anthropic||"",gemini:d.gemini||"",groq:d.groq||""});
-        setApiUsage({anthropic:d.usage_anthropic||0,gemini:d.usage_gemini||0,groq:d.usage_groq||0});
-        if(d.preferred) setPreferredApi(d.preferred);
+        setApiKeys(d);
+        const usage={};
+        APIS.forEach(a=>{usage[a.id]=d["usage_"+a.id]||0;});
+        setApiUsage(usage);
+        if(d.preferred)setPreferredApi(d.preferred);
       }
       setKeysLoaded(true);
     });
   },[user,isAdmin,keysLoaded]);
 
-  const loadKeysForGen = ()=>db.doc("config/apikeys").get().then(s=>s.exists?s.data():{});
+  const loadKeysForGen=()=>db.doc("config/apikeys").get().then(s=>s.exists?s.data():{});
+  const signIn=()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+  const signOutUser=()=>{auth.signOut();setUser(null);setView("home");};
 
-  const signIn = ()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-  const signOutUser = ()=>{auth.signOut();setUser(null);setView("home");};
-
-  const saveAdminKeys = async()=>{
-    await db.doc("config/apikeys").set({
-      anthropic:apiKeys.anthropic,gemini:apiKeys.gemini,groq:apiKeys.groq,
-      preferred:preferredApi,
-      usage_anthropic:apiUsage.anthropic,usage_gemini:apiUsage.gemini,usage_groq:apiUsage.groq
-    });
+  const saveAdminKeys=async()=>{
+    const data={...apiKeys,preferred:preferredApi};
+    APIS.forEach(a=>{data["usage_"+a.id]=apiUsage[a.id]||0;});
+    await db.doc("config/apikeys").set(data);
     setAdminSaved(true);setTimeout(()=>setAdminSaved(false),2000);
   };
 
-  const bumpUsage = async(apiId)=>{
-    const snap=await db.doc("config/apikeys").get();
-    if(!snap.exists) return;
-    const d=snap.data(); const k=`usage_${apiId}`;
-    await db.doc("config/apikeys").set({...d,[k]:(d[k]||0)+1});
+  const bumpUsage=async(apiId)=>{
     setApiUsage(p=>({...p,[apiId]:(p[apiId]||0)+1}));
+    const snap=await db.doc("config/apikeys").get();
+    if(!snap.exists)return;
+    const d=snap.data();const k="usage_"+apiId;
+    db.doc("config/apikeys").set({...d,[k]:(d[k]||0)+1});
   };
 
-  const generate = async()=>{
+  // Generate story
+  const generate=async()=>{
     setBusy(true);
-    const lesson=lessonRef.current?.value||"";
+    const lesson=lessonRef.current?lessonRef.current.value:"";
     const f={...form,lesson};
     const cfg=await loadKeysForGen();
     const prompt=L.prompt(f);
@@ -274,61 +279,69 @@ function App() {
     let text="",usedApi="";
     for(const apiId of order){
       const api=APIS.find(a=>a.id===apiId);
+      // puter no necesita key
+      if(apiId==="puter"){
+        try{text=await api.call(prompt);if(text){usedApi=apiId;await bumpUsage(apiId);break;}}catch{continue;}
+        continue;
+      }
+      // cloudflare necesita accountId|token
       const key=cfg[apiId];
-      if(!key) continue;
-      try{ text=await api.call(prompt,key); if(text){usedApi=apiId;await bumpUsage(apiId);break;} }catch{continue;}
+      if(!key)continue;
+      try{text=await api.call(prompt,key);if(text){usedApi=apiId;await bumpUsage(apiId);break;}}catch{continue;}
     }
-    if(!text) text="No se pudo generar el cuento. Contacta al administrador.";
-    setStory({text,lang,style:f.style,age:f.age,gender:f.gender,interests:f.interests,lesson:f.lesson,usedApi,
-      authorUid:user?.uid,authorName:user?.displayName||"Anónimo",
+    if(!text)text="No se pudo generar el cuento. Verifica las API keys en Admin.";
+    const img=await genImage(L.imgP(f));
+    setImgUrl(img);
+    setStory({text,lang,style:f.style,age:f.age,gender:f.gender,interests:f.interests,lesson:f.lesson,
+      usedApi,imgUrl:img,authorUid:user?user.uid:null,authorName:user?user.displayName:"Anónimo",
       rating:{avg:0,count:0,votes:{}},chapters:[],createdAt:new Date().toISOString()});
     setDisplayed("");setAnimating(false);setBusy(false);setView("story");
   };
 
-  const saveStory = async()=>{
-    if(!user||!story) return;
+  const saveStory=async()=>{
+    if(!user||!story)return;
     const ref=await db.collection("stories").add(story);
     setStory(p=>({...p,id:ref.id}));
     setSavedMsg(true);setTimeout(()=>setSavedMsg(false),2000);
   };
 
-  const loadStories = async()=>{
+  const loadStories=async()=>{
     const snap=await db.collection("stories").orderBy("createdAt","desc").limit(30).get();
     setStories(snap.docs.map(d=>({id:d.id,...d.data()})));
   };
 
   useEffect(()=>{if(view==="community")loadStories();},[view]);
 
-  const rateStory = async(s,stars)=>{
-    if(!user||!s.id) return;
-    const votes={...(s.rating?.votes||{}),[user.uid]:stars};
+  const rateStory=async(s,stars)=>{
+    if(!user||!s.id)return;
+    const votes={...(s.rating&&s.rating.votes?s.rating.votes:{}),[user.uid]:stars};
     const vals=Object.values(votes);
     const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
-    await db.doc(`stories/${s.id}`).update({"rating.votes":votes,"rating.avg":avg,"rating.count":vals.length});
-    const updated={...s,rating:{votes,avg,count:vals.length}};
-    setStories(p=>p.map(x=>x.id===s.id?updated:x));
-    if(selected?.id===s.id) setSelected(updated);
+    await db.doc("stories/"+s.id).update({"rating.votes":votes,"rating.avg":avg,"rating.count":vals.length});
+    const upd={...s,rating:{votes,avg,count:vals.length}};
+    setStories(p=>p.map(x=>x.id===s.id?upd:x));
+    if(selected&&selected.id===s.id)setSelected(upd);
   };
 
-  const proposeChapter = async()=>{
-    if(!user||!proposal.trim()||!selected?.id) return;
-    const ch={text:proposal,proposedBy:user.displayName,proposedByUid:user.uid,
-      status:"pending",createdAt:new Date().toISOString()};
-    await db.doc(`stories/${selected.id}`).update({chapters:firebase.firestore.FieldValue.arrayUnion(ch)});
+  const proposeChapter=async()=>{
+    if(!user||!proposal.trim()||!selected||!selected.id)return;
+    const ch={text:proposal,proposedBy:user.displayName,proposedByUid:user.uid,status:"pending",createdAt:new Date().toISOString()};
+    await db.doc("stories/"+selected.id).update({chapters:firebase.firestore.FieldValue.arrayUnion(ch)});
     setSelected(p=>({...p,chapters:[...(p.chapters||[]),ch]}));
     setProposal("");
   };
 
-  const updateChapter = async(idx,status)=>{
-    if(!selected?.id) return;
+  const updateChapter=async(idx,status)=>{
+    if(!selected||!selected.id)return;
     const chapters=selected.chapters.map((c,i)=>i===idx?{...c,status}:c);
-    await db.doc(`stories/${selected.id}`).update({chapters});
+    await db.doc("stories/"+selected.id).update({chapters});
     setSelected(p=>({...p,chapters}));
   };
 
-  const startAnim = (fromWord=0)=>{
+  // Animation
+  const startAnim=(fromWord=0)=>{
     clearInterval(animRef.current);
-    const words=(selected?.text||story?.text||"").split(" ");
+    const words=((selected?selected.text:story?story.text:"")||"").split(" ");
     let i=Math.max(0,fromWord);
     setDisplayed(words.slice(0,i).join(" "));
     setAnimating(true);
@@ -341,436 +354,414 @@ function App() {
   const rewindAnim=()=>startAnim(Math.max(0,displayed.split(" ").length-20));
   useEffect(()=>()=>clearInterval(animRef.current),[]);
 
+  // Audio
+  const speak=(text)=>{
+    if(!("speechSynthesis" in window))return;
+    if(speaking){window.speechSynthesis.cancel();setSpeaking(false);return;}
+    window.speechSynthesis.cancel();
+    const utt=new SpeechSynthesisUtterance(text);
+    utt.rate=0.85;utt.pitch=1.05;
+    const langMap={es:"es",ca:"ca",fr:"fr",en:"en",pt:"pt"};
+    const chosen=voices.find(v=>v.voiceURI===selVoice)||voices.find(v=>v.lang.startsWith(langMap[lang]))||voices[0];
+    if(chosen)utt.voice=chosen;
+    utt.onend=()=>setSpeaking(false);
+    utt.onerror=()=>setSpeaking(false);
+    window.speechSynthesis.speak(utt);
+    setSpeaking(true);
+  };
+  const voicesForLang=voices.filter(v=>v.lang.startsWith(lang==="ca"?"ca":lang==="es"?"es":lang==="fr"?"fr":lang==="pt"?"pt":"en"));
+
   const resetCreate=()=>{
-    setStep(0);setStory(null);setDisplayed("");setAnimating(false);
-    setForm({age:"",gender:"",interests:[],style:"",lesson:""});
-    setView("create");
+    setStep(0);setStory(null);setImgUrl(null);setDisplayed("");setAnimating(false);
+    setForm({age:"",gender:"",interests:[],style:"",lesson:""});setView("create");
   };
   const toggleInterest=v=>setForm(p=>({...p,interests:p.interests.includes(v)?p.interests.filter(x=>x!==v):[...p.interests,v]}));
-  const canNext=()=>{
-    if(step===0) return form.age!=="";
-    if(step===1) return form.gender!=="";
-    if(step===2) return form.interests.length>0;
-    if(step===3) return form.style!=="";
-    return true;
+  const canNext=()=>{if(step===0)return form.age!=="";if(step===1)return form.gender!=="";if(step===2)return form.interests.length>0;if(step===3)return form.style!=="";return true;};
+
+  // ── Style helpers ─────────────────────────────────────────────────────────
+  const css={
+    bg:{minHeight:"100vh",background:"linear-gradient(135deg,#e0e7ff,#f5f3ff,#fce7f3)"},
+    card:{background:"#fff",borderRadius:24,boxShadow:"0 10px 40px rgba(0,0,0,.1)",padding:28,width:"100%",maxWidth:440,margin:"0 auto"},
+    inp:{width:"100%",boxSizing:"border-box",padding:"12px 16px",border:"2px solid #e5e7eb",borderRadius:14,fontSize:15,outline:"none",fontFamily:"inherit"},
+    pill:(on,c="#6366f1")=>({padding:"10px 16px",borderRadius:14,border:"2px solid "+(on?c:"#e5e7eb"),background:on?c+"18":"#fff",color:on?c:"#6b7280",fontWeight:700,cursor:"pointer",fontSize:14,transition:"all .15s"}),
+    btn:(green)=>({padding:"12px 20px",borderRadius:16,border:"none",cursor:"pointer",fontWeight:700,fontSize:14,background:green?"linear-gradient(to right,#22c55e,#10b981)":GR,color:"#fff"}),
+    btnBack:{padding:"12px 20px",borderRadius:16,border:"none",cursor:"pointer",fontWeight:600,fontSize:14,background:"#f3f4f6",color:"#374151"},
   };
 
-  // ── Styles helpers ────────────────────────────────────────────────────────
-  const card = {background:"#fff",borderRadius:24,boxShadow:"0 10px 40px rgba(0,0,0,.1)",padding:28,width:"100%",maxWidth:440,margin:"0 auto"};
-  const wideCard = {...card,maxWidth:520};
-  const bg = {minHeight:"100vh",background:"linear-gradient(135deg,#e0e7ff,#f5f3ff,#fce7f3)"};
-  const inp = {width:"100%",boxSizing:"border-box",padding:"12px 20px",border:"2px solid #e5e7eb",borderRadius:16,fontSize:16,outline:"none",fontFamily:"inherit"};
-  const pill = (active,color="#6366f1")=>({padding:"10px 16px",borderRadius:16,border:`2px solid ${active?color:"#e5e7eb"}`,
-    background:active?`${color}15`:"#fff",color:active?color:"#6b7280",fontWeight:700,cursor:"pointer",transition:"all .15s",fontSize:14});
-
-  if(!authReady) return <div style={{...bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
-    <div style={{width:32,height:32,border:"3px solid #6366f1",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
-  </div>;
-
-  // ── Nav ───────────────────────────────────────────────────────────────────
-  const Nav = ()=>(
+  // Nav
+  const Nav=()=>(
     <nav style={{background:"#fff",boxShadow:"0 1px 8px rgba(0,0,0,.08)",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:10}}>
-      <button onClick={()=>setView("home")} style={{background:"none",border:"none",cursor:"pointer",fontWeight:700,color:"#4f46e5",fontSize:15,display:"flex",alignItems:"center",gap:6}}>
-        🌙 Cuentos
-      </button>
+      <button onClick={()=>setView("home")} style={{background:"none",border:"none",cursor:"pointer",fontWeight:700,color:"#4f46e5",fontSize:15}}>🌙 Cuentos</button>
       <div style={{display:"flex",alignItems:"center",gap:6}}>
         {user&&<>
-          <button onClick={()=>setView("community")} style={{...pill(view==="community"),padding:"6px 12px"}}>
-            {L.community}
-          </button>
-          <button onClick={resetCreate} style={{...pill(view==="create"||view==="story"),padding:"6px 12px"}}>
-            {L.create}
-          </button>
-          {isAdmin&&<button onClick={()=>setView("admin")}
-            style={{...pill(view==="admin","#f97316"),padding:"6px 12px"}}>
-            🛡 Admin
-          </button>}
-          <button onClick={signOutUser} style={{background:"none",border:"none",cursor:"pointer",color:"#9ca3af",fontSize:13}}>
-            ⎋
-          </button>
+          <button onClick={()=>setView("community")} style={{...css.pill(view==="community"),padding:"6px 12px",fontSize:12}}>{L.community}</button>
+          <button onClick={resetCreate} style={{...css.pill(view==="create"||view==="story"),padding:"6px 12px",fontSize:12}}>{L.create}</button>
+          {isAdmin&&<button onClick={()=>setView("admin")} style={{...css.pill(view==="admin","#f97316"),padding:"6px 12px",fontSize:12}}>🛡 Admin</button>}
+          <button onClick={signOutUser} style={{background:"none",border:"none",cursor:"pointer",color:"#9ca3af",fontSize:18}}>⎋</button>
         </>}
-        <select value={lang} onChange={e=>setLang(e.target.value)}
-          style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"4px 6px",fontSize:13,color:"#374151",cursor:"pointer"}}>
+        <select value={lang} onChange={e=>setLang(e.target.value)} style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"4px 6px",fontSize:13,cursor:"pointer"}}>
           {Object.entries(LANGS).map(([k,v])=><option key={k} value={k}>{v.flag} {v.name}</option>)}
         </select>
       </div>
     </nav>
   );
 
-  const Page = ({children})=>(
-    <div style={bg}>
-      <Nav/>
-      <div style={{padding:16,maxWidth:600,margin:"0 auto"}}>{children}</div>
+  const Page=({children})=>(
+    <div style={css.bg}><Nav/><div style={{padding:16,maxWidth:620,margin:"0 auto"}}>{children}</div></div>
+  );
+
+  // Story box with image
+  const StoryBox=({text,img})=>(
+    <div>
+      {img&&<img src={img} alt="Ilustración" style={{width:"100%",borderRadius:16,marginBottom:12,boxShadow:"0 4px 20px rgba(0,0,0,.12)"}} onError={e=>e.target.style.display="none"}/>}
+      <div style={{background:"#fffbeb",borderRadius:18,padding:20,borderLeft:"4px solid #fb923c",marginBottom:12,minHeight:80}}>
+        {displayed===""&&!animating
+          ?<p style={{color:"#9ca3af",fontSize:13,margin:0,fontStyle:"italic"}}>Pulsa {L.read} para leer</p>
+          :<p style={{margin:0,color:"#1f2937",lineHeight:1.8,whiteSpace:"pre-wrap",fontSize:14,fontFamily:"Georgia,serif"}}>
+            {displayed}{animating&&<span style={{display:"inline-block",width:8,height:16,background:"#fb923c",marginLeft:4,borderRadius:3,verticalAlign:"middle",animation:"pulse 1s infinite"}}/>}
+          </p>
+        }
+      </div>
+    </div>
+  );
+
+  // Read controls
+  const ReadCtrl=()=>(
+    <div style={{display:"flex",gap:8,marginBottom:12}}>
+      <button onClick={rewindAnim} style={{flex:1,padding:"8px 4px",borderRadius:12,background:"#f9fafb",border:"2px solid #e5e7eb",cursor:"pointer",fontWeight:700,fontSize:12,color:"#374151"}}>{L.rewind}</button>
+      {animating
+        ?<button onClick={pauseAnim} style={{flex:2,padding:"8px",borderRadius:12,background:"#fff7ed",border:"2px solid #fed7aa",color:"#c2410c",fontWeight:700,cursor:"pointer",fontSize:12}}>{L.pause}</button>
+        :<button onClick={()=>startAnim(displayed?displayed.split(" ").length:0)} style={{flex:2,padding:"8px",borderRadius:12,background:"#eef2ff",border:"2px solid #c7d2fe",color:"#4338ca",fontWeight:700,cursor:"pointer",fontSize:12}}>{L.read}</button>
+      }
+      <button onClick={()=>{setDisplayed("");startAnim(0);}} style={{flex:1,padding:"8px 4px",borderRadius:12,background:"#f9fafb",border:"2px solid #e5e7eb",cursor:"pointer",fontWeight:700,fontSize:12,color:"#374151"}}>{L.restart}</button>
+    </div>
+  );
+
+  // Audio controls
+  const AudioCtrl=({text})=>(
+    <div style={{marginBottom:14,padding:12,background:"#f5f3ff",borderRadius:14}}>
+      {voicesForLang.length>0&&
+        <select value={selVoice} onChange={e=>setSelVoice(e.target.value)}
+          style={{width:"100%",padding:"8px 10px",borderRadius:10,border:"1px solid #c4b5fd",fontSize:13,color:"#4c1d95",background:"#fff",marginBottom:8}}>
+          <option value="">🎙 Voz automática</option>
+          {voicesForLang.map(v=><option key={v.voiceURI} value={v.voiceURI}>{v.name}</option>)}
+        </select>
+      }
+      <button onClick={()=>speak(text)}
+        style={{width:"100%",padding:10,borderRadius:12,fontWeight:700,fontSize:13,cursor:"pointer",border:"2px solid",
+          background:speaking?"#fee2e2":"#ede9fe",color:speaking?"#991b1b":"#5b21b6",borderColor:speaking?"#fca5a5":"#c4b5fd"}}>
+        {speaking?"⏹ Detener audio":"🔊 Escuchar cuento"}
+      </button>
+    </div>
+  );
+
+  // Chapters section
+  const Chapters=({s,isAuthor})=>(
+    <div style={{borderTop:"1px solid #f3f4f6",paddingTop:16}}>
+      <h3 style={{margin:"0 0 12px",fontSize:14,fontWeight:700,color:"#374151"}}>{L.chapters}</h3>
+      {(s.chapters||[]).map((ch,i)=>(
+        <div key={i} style={{borderRadius:12,padding:12,marginBottom:8,border:"2px solid "+(ch.status==="accepted"?"#6ee7b7":ch.status==="rejected"?"#fca5a5":"#e5e7eb"),background:ch.status==="accepted"?"#f0fdf4":ch.status==="rejected"?"#fef2f2":"#f9fafb"}}>
+          <p style={{margin:"0 0 6px",color:"#374151",fontSize:12}}>{ch.text}</p>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <span style={{fontSize:11,color:"#9ca3af"}}>{ch.proposedBy}</span>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:11,fontWeight:600,color:ch.status==="accepted"?"#059669":ch.status==="rejected"?"#dc2626":"#d97706"}}>{L[ch.status]}</span>
+              {isAuthor&&ch.status==="pending"&&
+                <div style={{display:"flex",gap:4}}>
+                  <button onClick={()=>updateChapter(i,"accepted")} style={{padding:"3px 8px",borderRadius:8,background:"#d1fae5",border:"none",cursor:"pointer",color:"#065f46",fontSize:12}}>✓</button>
+                  <button onClick={()=>updateChapter(i,"rejected")} style={{padding:"3px 8px",borderRadius:8,background:"#fee2e2",border:"none",cursor:"pointer",color:"#991b1b",fontSize:12}}>✗</button>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      ))}
+      {!isAuthor&&user&&
+        <div style={{marginTop:12}}>
+          <textarea value={proposal} onChange={e=>setProposal(e.target.value)} placeholder={L.proposePH}
+            style={{...css.inp,height:80,resize:"none",fontSize:13}}/>
+          <button onClick={proposeChapter} disabled={!proposal.trim()}
+            style={{width:"100%",marginTop:8,padding:10,borderRadius:14,fontWeight:700,fontSize:13,border:"none",
+              cursor:proposal.trim()?"pointer":"not-allowed",background:proposal.trim()?GR:"#f3f4f6",color:proposal.trim()?"#fff":"#9ca3af"}}>
+            {L.send}
+          </button>
+        </div>
+      }
+    </div>
+  );
+
+  // ── Loading ───────────────────────────────────────────────────────────────
+  if(!authReady)return(
+    <div style={{...css.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{width:36,height:36,border:"3px solid #6366f1",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
     </div>
   );
 
   // ── Admin ─────────────────────────────────────────────────────────────────
-  if(view==="admin"&&isAdmin) return <Page>
-    <div style={{background:"#fff",borderRadius:24,boxShadow:"0 10px 40px rgba(0,0,0,.1)",padding:28}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-        <span style={{fontSize:24}}>🛡</span>
-        <h2 style={{margin:0,fontSize:20,fontWeight:700}}>Panel Admin</h2>
-      </div>
-      <p style={{fontSize:12,color:"#9ca3af",marginBottom:24}}>Solo visible para ti. Las keys nunca se exponen a otros usuarios.</p>
+  if(view==="admin"&&isAdmin)return(
+    <Page>
+      <div style={{background:"#fff",borderRadius:24,boxShadow:"0 10px 40px rgba(0,0,0,.1)",padding:28}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+          <span style={{fontSize:24}}>🛡</span>
+          <h2 style={{margin:0,fontSize:20,fontWeight:700}}>Panel Admin</h2>
+        </div>
+        <p style={{fontSize:12,color:"#9ca3af",marginBottom:20}}>Solo visible para ti. Keys protegidas en Firestore.</p>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:24}}>
-        {APIS.map(api=>(
-          <div key={api.id} style={{background:"#f9fafb",borderRadius:16,padding:16,textAlign:"center",border:"1px solid #f3f4f6"}}>
-            <div style={{fontSize:28,fontWeight:700,color:"#4f46e5"}}>{apiUsage[api.id]||0}</div>
-            <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>{api.name}</div>
-            <div style={{fontSize:11,color:"#9ca3af"}}>{api.free}</div>
+        {/* Counters */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10,marginBottom:20}}>
+          {APIS.map(a=>(
+            <div key={a.id} style={{background:"#f9fafb",borderRadius:14,padding:12,textAlign:"center",border:"1px solid #f3f4f6"}}>
+              <div style={{fontSize:22,fontWeight:700,color:"#4f46e5"}}>{apiUsage[a.id]||0}</div>
+              <div style={{fontSize:11,color:"#6b7280",marginTop:2}}>{a.name}</div>
+              <div style={{fontSize:10,color:"#9ca3af"}}>{a.free}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Preferred */}
+        <div style={{marginBottom:16}}>
+          <label style={{fontSize:12,fontWeight:600,color:"#6b7280",display:"block",marginBottom:6}}>API preferida (fallback automático)</label>
+          <select value={preferredApi} onChange={e=>setPreferredApi(e.target.value)}
+            style={{width:"100%",padding:"10px",borderRadius:12,border:"2px solid #e5e7eb",fontSize:13}}>
+            {APIS.map(a=><option key={a.id} value={a.id}>{a.name} — {a.free}</option>)}
+          </select>
+        </div>
+
+        {/* Keys — todos los campos */}
+        {APIS.filter(a=>a.id!=="puter").map(a=>(
+          <div key={a.id} style={{marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+              <label style={{fontSize:12,fontWeight:600,color:"#374151"}}>{a.name}</label>
+              <a href={a.url} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#6366f1",textDecoration:"none"}}>Obtener key →</a>
+            </div>
+            {a.id==="cloudflare"
+              ?<input type="password" placeholder="AccountID|API_Token (separados por |)"
+                  value={apiKeys[a.id]||""} onChange={e=>setApiKeys(p=>({...p,[a.id]:e.target.value}))}
+                  style={{...css.inp,fontFamily:"monospace",fontSize:12}}/>
+              :<input type="password" placeholder={"Key de "+a.name}
+                  value={apiKeys[a.id]||""} onChange={e=>setApiKeys(p=>({...p,[a.id]:e.target.value}))}
+                  style={{...css.inp,fontFamily:"monospace",fontSize:12}}/>
+            }
+            <p style={{fontSize:10,color:"#9ca3af",marginTop:2}}>{a.free}</p>
           </div>
         ))}
-      </div>
+        <div style={{marginBottom:14,padding:12,background:"#f0fdf4",borderRadius:12,border:"1px solid #6ee7b7"}}>
+          <p style={{margin:0,fontSize:12,color:"#065f46"}}>✅ <strong>Puter.js</strong> — Sin key. Accede a Claude, GPT y Gemini gratis automáticamente.</p>
+        </div>
 
-      <div style={{marginBottom:16}}>
-        <label style={{fontSize:12,fontWeight:600,color:"#6b7280",display:"block",marginBottom:8}}>API preferida (fallback automático)</label>
-        <div style={{display:"flex",gap:8}}>
-          {APIS.map(api=>(
-            <button key={api.id} onClick={()=>setPreferredApi(api.id)}
-              style={{...pill(preferredApi===api.id),flex:1,textAlign:"center"}}>
-              {api.name}
-            </button>
-          ))}
+        <button onClick={saveAdminKeys}
+          style={{width:"100%",padding:14,borderRadius:18,fontWeight:700,fontSize:14,marginTop:4,border:"none",cursor:"pointer",
+            background:adminSaved?"#d1fae5":GR,color:adminSaved?"#065f46":"#fff",outline:adminSaved?"2px solid #6ee7b7":"none"}}>
+          {adminSaved?"✓ Guardado en Firestore":"Guardar todas las keys"}
+        </button>
+        <div style={{marginTop:12,padding:12,background:"#fff7ed",borderRadius:12,border:"1px solid #fed7aa"}}>
+          <p style={{fontSize:12,color:"#c2410c",margin:0}}>🔒 Solo tu UID puede leer o escribir estas keys. Los demás usuarios las usan indirectamente.</p>
         </div>
       </div>
-
-      {APIS.map(api=>(
-        <div key={api.id} style={{marginBottom:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-            <label style={{fontSize:12,fontWeight:600,color:"#374151"}}>{api.name}</label>
-            <a href={api.docsUrl} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#6366f1",textDecoration:"none"}}>Obtener key →</a>
-          </div>
-          <input type="password" placeholder={`Key de ${api.name}`}
-            value={apiKeys[api.id]}
-            onChange={e=>setApiKeys(p=>({...p,[api.id]:e.target.value}))}
-            style={{...inp,fontFamily:"monospace",fontSize:13}}/>
-          <p style={{fontSize:11,color:"#9ca3af",marginTop:2}}>{api.free}</p>
-        </div>
-      ))}
-
-      <button onClick={saveAdminKeys}
-        style={{width:"100%",padding:"14px",borderRadius:18,fontWeight:700,fontSize:14,marginTop:8,
-          ...(adminSaved?{background:"#d1fae5",color:"#065f46",border:"2px solid #6ee7b7"}:{...grBtn,border:"none"})}}>
-        {adminSaved?"✓ Guardado en Firestore":"Guardar keys de forma segura"}
-      </button>
-
-      <div style={{marginTop:16,padding:12,background:"#fff7ed",borderRadius:12,border:"1px solid #fed7aa"}}>
-        <p style={{fontSize:12,color:"#c2410c",margin:0}}>🔒 Las keys se guardan en Firestore protegidas por Security Rules. Solo tu UID puede leerlas o modificarlas.</p>
-      </div>
-    </div>
-  </Page>;
+    </Page>
+  );
 
   // ── Home ──────────────────────────────────────────────────────────────────
-  if(view==="home") return <Page>
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh",textAlign:"center",gap:20}}>
-      <div style={{fontSize:64,animation:"pulse 2s infinite"}}>🌙</div>
-      <div>
-        <h1 style={{margin:0,fontSize:28,fontWeight:700,color:"#1f2937"}}>Cuentos de Buenas Noches</h1>
-        <p style={{color:"#6b7280",marginTop:8,fontSize:14,maxWidth:320}}>Crea, comparte y califica cuentos. Colabora en nuevos capítulos con tu comunidad.</p>
-      </div>
-      {!user
-        ?<button onClick={signIn} style={{...grBtn,padding:"14px 32px",borderRadius:20,fontWeight:700,fontSize:16,display:"flex",alignItems:"center",gap:10}}>
-            👤 Entrar con Google
-          </button>
-        :<div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center"}}>
-            <button onClick={resetCreate} style={{...grBtn,padding:"12px 24px",borderRadius:18,fontWeight:700,fontSize:15,display:"flex",alignItems:"center",gap:8}}>
-              ✨ {L.create}
-            </button>
-            <button onClick={()=>setView("community")}
-              style={{padding:"12px 24px",borderRadius:18,fontWeight:700,fontSize:15,background:"#fff",border:"2px solid #c7d2fe",color:"#4f46e5",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
-              🌍 {L.community}
-            </button>
-          </div>
-      }
-    </div>
-  </Page>;
-
-  // ── Community list ────────────────────────────────────────────────────────
-  if(view==="community"&&!selected) return <Page>
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-      <h2 style={{margin:0,fontSize:18,fontWeight:700}}>{L.community}</h2>
-      <button onClick={loadStories} style={{background:"none",border:"none",color:"#6366f1",cursor:"pointer",fontSize:13}}>↻ Actualizar</button>
-    </div>
-    {stories.length===0
-      ?<p style={{textAlign:"center",color:"#9ca3af",marginTop:60}}>{L.noStories}</p>
-      :<div style={{display:"flex",flexDirection:"column",gap:12}}>
-          {stories.map(s=>(
-            <button key={s.id} onClick={()=>{setSelected(s);setDisplayed("");setAnimating(false);}}
-              style={{background:"#fff",borderRadius:18,boxShadow:"0 2px 12px rgba(0,0,0,.06)",padding:16,textAlign:"left",border:"none",cursor:"pointer",width:"100%"}}>
-              <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start"}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <p style={{margin:0,fontSize:13,color:"#374151",overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{s.text?.slice(0,100)}...</p>
-                  <p style={{margin:"6px 0 0",fontSize:11,color:"#9ca3af"}}>{s.authorName} · {LANGS[s.lang]?.flag} · {s.style}</p>
-                </div>
-                <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"#374151"}}>★ {s.rating?.avg?.toFixed(1)||"—"}</div>
-                  <div style={{fontSize:11,color:"#9ca3af"}}>{s.rating?.count||0} votos</div>
-                </div>
-              </div>
-            </button>
-          ))}
+  if(view==="home")return(
+    <Page>
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"72vh",textAlign:"center",gap:20}}>
+        <div style={{fontSize:64,animation:"pulse 2s infinite"}}>🌙</div>
+        <div>
+          <h1 style={{margin:0,fontSize:28,fontWeight:700,color:"#1f2937"}}>Cuentos de Buenas Noches</h1>
+          <p style={{color:"#6b7280",marginTop:8,fontSize:14,maxWidth:320,margin:"8px auto 0"}}>Crea, comparte y califica cuentos. Colabora en nuevos capítulos con tu comunidad.</p>
         </div>
-    }
-  </Page>;
-
-  // ── Story detail ──────────────────────────────────────────────────────────
-  if(view==="community"&&selected){
-    const myVote=selected.rating?.votes?.[user?.uid]||0;
-    const isAuthor=selected.authorUid===user?.uid;
-    const StoryBox=()=>(
-      <div style={{background:"#fffbeb",borderRadius:18,padding:20,borderLeft:"4px solid #fb923c",marginBottom:12,minHeight:80}}>
-        {displayed===""&&!animating
-          ?<p style={{color:"#9ca3af",fontSize:13,margin:0,fontStyle:"italic"}}>Pulsa {L.read} para leer</p>
-          :<p style={{margin:0,color:"#1f2937",lineHeight:1.7,whiteSpace:"pre-wrap",fontSize:14,fontFamily:"Georgia,serif"}}>
-              {displayed}{animating&&<span style={{display:"inline-block",width:8,height:16,background:"#fb923c",marginLeft:4,borderRadius:3,verticalAlign:"middle",animation:"pulse 1s infinite"}}/>}
-            </p>
+        {!user
+          ?<button onClick={signIn} style={{...css.btn(),padding:"14px 32px",fontSize:16,display:"flex",alignItems:"center",gap:10}}>👤 Entrar con Google</button>
+          :<div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center"}}>
+              <button onClick={resetCreate} style={{...css.btn(),padding:"12px 24px",fontSize:15,display:"flex",alignItems:"center",gap:8}}>✨ {L.create}</button>
+              <button onClick={()=>setView("community")} style={{padding:"12px 24px",borderRadius:18,fontWeight:700,fontSize:15,background:"#fff",border:"2px solid #c7d2fe",color:"#4f46e5",cursor:"pointer"}}>🌍 {L.community}</button>
+            </div>
         }
       </div>
-    );
-    return <Page>
-      <button onClick={()=>{setSelected(null);pauseAnim();}}
-        style={{background:"none",border:"none",color:"#6366f1",cursor:"pointer",fontSize:13,marginBottom:12,display:"flex",alignItems:"center",gap:4}}>
-        ← {L.back}
-      </button>
-      <div style={{background:"#fff",borderRadius:24,boxShadow:"0 10px 40px rgba(0,0,0,.1)",overflow:"hidden"}}>
-        <div style={{background:GR,padding:20,color:"#fff"}}>
-          <p style={{margin:0,fontSize:12,opacity:.8}}>{selected.authorName} · {LANGS[selected.lang]?.flag} · {selected.style}</p>
-          <p style={{margin:"4px 0 0",fontWeight:700}}>★ {selected.rating?.avg?.toFixed(1)||"—"} <span style={{fontSize:12,opacity:.7}}>({selected.rating?.count||0} votos)</span></p>
-        </div>
-        <div style={{padding:20}}>
-          <StoryBox/>
-          <div style={{display:"flex",gap:8,marginBottom:16}}>
-            <button onClick={rewindAnim} style={{...pill(false),flex:1,textAlign:"center",padding:"8px 4px",fontSize:12}}>{L.rewind}</button>
-            {animating
-              ?<button onClick={pauseAnim} style={{flex:2,padding:"8px 12px",borderRadius:14,background:"#fff7ed",border:"2px solid #fed7aa",color:"#c2410c",fontWeight:700,cursor:"pointer",fontSize:12}}>{L.pause}</button>
-              :<button onClick={()=>startAnim(displayed?displayed.split(" ").length:0)}
-                  style={{flex:2,padding:"8px 12px",borderRadius:14,background:"#eef2ff",border:"2px solid #c7d2fe",color:"#4338ca",fontWeight:700,cursor:"pointer",fontSize:12}}>{L.read}</button>
-            }
-            <button onClick={()=>{setDisplayed("");startAnim(0);}} style={{...pill(false),flex:1,textAlign:"center",padding:"8px 4px",fontSize:12}}>{L.restart}</button>
-          </div>
+    </Page>
+  );
 
-          {!isAuthor&&user&&<div style={{marginBottom:16}}>
-            <p style={{fontSize:12,fontWeight:600,color:"#6b7280",marginBottom:4}}>{L.rate}</p>
-            <Stars value={myVote} onChange={s=>rateStory(selected,s)}/>
-          </div>}
-
-          <div style={{borderTop:"1px solid #f3f4f6",paddingTop:16}}>
-            <h3 style={{margin:"0 0 12px",fontSize:14,fontWeight:700,color:"#374151"}}>{L.chapters}</h3>
-            {(selected.chapters||[]).map((ch,i)=>(
-              <div key={i} style={{borderRadius:12,padding:12,marginBottom:8,fontSize:13,
-                border:`2px solid ${ch.status==="accepted"?"#6ee7b7":ch.status==="rejected"?"#fca5a5":"#e5e7eb"}`,
-                background:ch.status==="accepted"?"#f0fdf4":ch.status==="rejected"?"#fef2f2":"#f9fafb"}}>
-                <p style={{margin:"0 0 6px",color:"#374151",fontSize:12}}>{ch.text}</p>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <span style={{fontSize:11,color:"#9ca3af"}}>{ch.proposedBy}</span>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{fontSize:11,fontWeight:600,color:ch.status==="accepted"?"#059669":ch.status==="rejected"?"#dc2626":"#d97706"}}>{L[ch.status]}</span>
-                    {isAuthor&&ch.status==="pending"&&<div style={{display:"flex",gap:4}}>
-                      <button onClick={()=>updateChapter(i,"accepted")} style={{padding:"3px 8px",borderRadius:8,background:"#d1fae5",border:"none",cursor:"pointer",color:"#065f46",fontSize:12}}>✓</button>
-                      <button onClick={()=>updateChapter(i,"rejected")} style={{padding:"3px 8px",borderRadius:8,background:"#fee2e2",border:"none",cursor:"pointer",color:"#991b1b",fontSize:12}}>✗</button>
-                    </div>}
+  // ── Community list ────────────────────────────────────────────────────────
+  if(view==="community"&&!selected)return(
+    <Page>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <h2 style={{margin:0,fontSize:18,fontWeight:700}}>{L.community}</h2>
+        <button onClick={loadStories} style={{background:"none",border:"none",color:"#6366f1",cursor:"pointer",fontSize:13}}>↻ Actualizar</button>
+      </div>
+      {stories.length===0
+        ?<p style={{textAlign:"center",color:"#9ca3af",marginTop:60}}>{L.noStories}</p>
+        :<div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {stories.map(s=>(
+              <button key={s.id} onClick={()=>{setSelected(s);setDisplayed("");setAnimating(false);}}
+                style={{background:"#fff",borderRadius:18,boxShadow:"0 2px 12px rgba(0,0,0,.06)",padding:0,textAlign:"left",border:"none",cursor:"pointer",width:"100%",overflow:"hidden"}}>
+                {s.imgUrl&&<img src={s.imgUrl} alt="" style={{width:"100%",height:140,objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>}
+                <div style={{padding:14}}>
+                  <p style={{margin:0,fontSize:13,color:"#374151",overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{s.text&&s.text.slice(0,100)}...</p>
+                  <div style={{display:"flex",justifyContent:"space-between",marginTop:8,alignItems:"center"}}>
+                    <span style={{fontSize:11,color:"#9ca3af"}}>{s.authorName} · {LANGS[s.lang]&&LANGS[s.lang].flag}</span>
+                    <span style={{fontSize:13,fontWeight:700,color:"#374151"}}>★ {s.rating&&s.rating.avg?s.rating.avg.toFixed(1):"—"} <span style={{fontSize:11,color:"#9ca3af"}}>({s.rating&&s.rating.count?s.rating.count:0})</span></span>
                   </div>
                 </div>
-              </div>
-            ))}
-            {!isAuthor&&user&&<div style={{marginTop:12}}>
-              <textarea value={proposal} onChange={e=>setProposal(e.target.value)}
-                placeholder={L.proposePH}
-                style={{...inp,height:80,resize:"none",fontSize:13}}/>
-              <button onClick={proposeChapter} disabled={!proposal.trim()}
-                style={{width:"100%",marginTop:8,padding:"10px",borderRadius:14,fontWeight:700,fontSize:13,
-                  ...(proposal.trim()?{...grBtn,border:"none"}:{background:"#f3f4f6",color:"#9ca3af",border:"none",cursor:"not-allowed"})}}>
-                {L.send}
               </button>
-            </div>}
+            ))}
+          </div>
+      }
+    </Page>
+  );
+
+  // ── Story detail (community) ──────────────────────────────────────────────
+  if(view==="community"&&selected){
+    const myVote=selected.rating&&selected.rating.votes&&user?selected.rating.votes[user.uid]||0:0;
+    const isAuthor=user&&selected.authorUid===user.uid;
+    return(
+      <Page>
+        <button onClick={()=>{setSelected(null);pauseAnim();}} style={{background:"none",border:"none",color:"#6366f1",cursor:"pointer",fontSize:13,marginBottom:12}}>← {L.back}</button>
+        <div style={{background:"#fff",borderRadius:24,boxShadow:"0 10px 40px rgba(0,0,0,.1)",overflow:"hidden"}}>
+          <div style={{background:GR,padding:20,color:"#fff"}}>
+            <p style={{margin:0,fontSize:12,opacity:.8}}>{selected.authorName} · {LANGS[selected.lang]&&LANGS[selected.lang].flag}</p>
+            <p style={{margin:"4px 0 0",fontWeight:700}}>★ {selected.rating&&selected.rating.avg?selected.rating.avg.toFixed(1):"—"} <span style={{fontSize:12,opacity:.7}}>({selected.rating&&selected.rating.count||0} votos)</span></p>
+          </div>
+          <div style={{padding:20}}>
+            <StoryBox text={selected.text} img={selected.imgUrl}/>
+            <ReadCtrl/>
+            <AudioCtrl text={selected.text}/>
+            {!isAuthor&&user&&
+              <div style={{marginBottom:16}}>
+                <p style={{fontSize:12,fontWeight:600,color:"#6b7280",marginBottom:4}}>{L.rate}</p>
+                <Stars value={myVote} onChange={stars=>rateStory(selected,stars)}/>
+              </div>
+            }
+            <Chapters s={selected} isAuthor={isAuthor}/>
           </div>
         </div>
-      </div>
-    </Page>;
+      </Page>
+    );
   }
 
-  // ── Create steps ──────────────────────────────────────────────────────────
+  // ── Create wizard ─────────────────────────────────────────────────────────
   const progress=((step+1)/5)*100;
   const Prog=({n})=>(
     <div style={{marginTop:20,textAlign:"center"}}>
       <div style={{fontSize:11,color:"#9ca3af",marginBottom:4}}>{L.step} {n} {L.of} 5</div>
-      <div style={{height:6,background:"#f3f4f6",borderRadius:6}}>
-        <div style={{height:6,background:"#6366f1",borderRadius:6,width:`${progress}%`,transition:"width .3s"}}/>
-      </div>
+      <div style={{height:6,background:"#f3f4f6",borderRadius:6}}><div style={{height:6,background:"#6366f1",borderRadius:6,width:progress+"%",transition:"width .3s"}}/></div>
     </div>
   );
 
   if(view==="create"){
-    if(busy) return <Page>
-      <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",textAlign:"center",gap:16}}>
-        <div style={{fontSize:56,animation:"pulse 2s infinite"}}>🌙</div>
-        <h2 style={{margin:0,fontSize:20,fontWeight:700,color:"#1f2937"}}>{L.steps[5]}</h2>
-        <p style={{color:"#9ca3af",fontSize:14}}>{L.subs[5]}</p>
-        <div style={{width:32,height:32,border:"3px solid #6366f1",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
-      </div>
-    </Page>;
-
-    const StepIcon=[<span style={{fontSize:40}}>✨</span>,<span style={{fontSize:40}}>💜</span>,<span style={{fontSize:40}}>⭐</span>,<span style={{fontSize:40}}>📖</span>,<span style={{fontSize:40}}>💚</span>];
-
-    return <Page>
-      <div style={{display:"flex",justifyContent:"center",paddingTop:8}}>
-        <div style={step===2?wideCard:card}>
-          <div style={{textAlign:"center",marginBottom:20}}>
-            {StepIcon[step]}
-            <h1 style={{margin:"8px 0 2px",fontSize:20,fontWeight:700,color:"#1f2937"}}>{L.steps[step]}</h1>
-            <p style={{margin:0,color:"#9ca3af",fontSize:13}}>{L.subs[step]}</p>
-          </div>
-
-          {step===0&&<>
-            <input type="number" min="2" max="12" placeholder={L.ageLabel} value={form.age}
-              onChange={e=>setForm(p=>({...p,age:e.target.value}))}
-              style={{...inp,fontSize:26,textAlign:"center",fontWeight:700,marginBottom:16}}/>
-            <button onClick={()=>setStep(1)} disabled={!canNext()}
-              style={{width:"100%",padding:14,borderRadius:18,fontWeight:700,fontSize:15,
-                ...(canNext()?{...grBtn,border:"none"}:{background:"#f3f4f6",color:"#9ca3af",border:"none",cursor:"not-allowed"})}}>
-              {L.cont} →
-            </button>
-            <Prog n={1}/>
-          </>}
-
-          {step===1&&<>
-            <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
-              {L.genders.map(g=>(
-                <button key={g} onClick={()=>setForm(p=>({...p,gender:g}))}
-                  style={{...pill(form.gender===g,"#9333ea"),textTransform:"capitalize",padding:12,fontSize:16}}>
-                  {g}
-                </button>
-              ))}
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setStep(0)} style={{flex:1,padding:12,borderRadius:16,background:"#f3f4f6",border:"none",cursor:"pointer",fontWeight:600,fontSize:14}}>← {L.back}</button>
-              <button onClick={()=>setStep(2)} disabled={!canNext()}
-                style={{flex:2,padding:12,borderRadius:16,fontWeight:700,fontSize:14,
-                  ...(canNext()?{...grBtn,border:"none"}:{background:"#f3f4f6",color:"#9ca3af",border:"none",cursor:"not-allowed"})}}>
-                {L.cont} →
-              </button>
-            </div>
-            <Prog n={2}/>
-          </>}
-
-          {step===2&&<>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
-              {L.interests.map(i=>(
-                <button key={i} onClick={()=>toggleInterest(i)}
-                  style={{...pill(form.interests.includes(i),"#ec4899"),padding:"8px 12px",fontSize:13}}>
-                  {i}
-                </button>
-              ))}
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setStep(1)} style={{flex:1,padding:12,borderRadius:16,background:"#f3f4f6",border:"none",cursor:"pointer",fontWeight:600,fontSize:14}}>← {L.back}</button>
-              <button onClick={()=>setStep(3)} disabled={!canNext()}
-                style={{flex:2,padding:12,borderRadius:16,fontWeight:700,fontSize:14,
-                  ...(canNext()?{...grBtn,border:"none"}:{background:"#f3f4f6",color:"#9ca3af",border:"none",cursor:"not-allowed"})}}>
-                {L.cont} →
-              </button>
-            </div>
-            <Prog n={3}/>
-          </>}
-
-          {step===3&&<>
-            <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
-              {L.styles.map(s=>(
-                <button key={s.value} onClick={()=>setForm(p=>({...p,style:s.value}))}
-                  style={{...pill(form.style===s.value,"#f97316"),display:"flex",alignItems:"center",gap:12,padding:"10px 14px",textAlign:"left"}}>
-                  <span style={{fontSize:22}}>{s.emoji}</span>
-                  <div><div style={{fontWeight:700,fontSize:13}}>{s.label}</div><div style={{fontSize:11,opacity:.7}}>{s.desc}</div></div>
-                </button>
-              ))}
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setStep(2)} style={{flex:1,padding:12,borderRadius:16,background:"#f3f4f6",border:"none",cursor:"pointer",fontWeight:600,fontSize:14}}>← {L.back}</button>
-              <button onClick={()=>setStep(4)} disabled={!canNext()}
-                style={{flex:2,padding:12,borderRadius:16,fontWeight:700,fontSize:14,
-                  ...(canNext()?{...grBtn,border:"none"}:{background:"#f3f4f6",color:"#9ca3af",border:"none",cursor:"not-allowed"})}}>
-                {L.cont} →
-              </button>
-            </div>
-            <Prog n={4}/>
-          </>}
-
-          {step===4&&<>
-            <textarea ref={lessonRef} defaultValue={form.lesson} placeholder={L.lessonPH}
-              style={{...inp,height:96,resize:"none",fontSize:14,marginBottom:16}}/>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setStep(3)} style={{flex:1,padding:12,borderRadius:16,background:"#f3f4f6",border:"none",cursor:"pointer",fontWeight:600,fontSize:14}}>← {L.back}</button>
-              <button onClick={generate}
-                style={{flex:2,padding:12,borderRadius:16,fontWeight:700,fontSize:14,background:"linear-gradient(to right,#22c55e,#10b981)",color:"#fff",border:"none",cursor:"pointer"}}>
-                {L.createBtn} ✨
-              </button>
-            </div>
-            <Prog n={5}/>
-          </>}
+    if(busy)return(
+      <Page>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",textAlign:"center",gap:16}}>
+          <div style={{fontSize:56,animation:"pulse 2s infinite"}}>🌙</div>
+          <h2 style={{margin:0,fontSize:20,fontWeight:700,color:"#1f2937"}}>{L.steps[5]}</h2>
+          <p style={{color:"#9ca3af",fontSize:14,margin:0}}>{L.subs[5]}</p>
+          <p style={{color:"#a78bfa",fontSize:12,margin:0}}>🎨 Generando imagen con Pollinations.ai...</p>
+          <div style={{width:32,height:32,border:"3px solid #6366f1",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
         </div>
-      </div>
-    </Page>;
+      </Page>
+    );
+
+    const icons=["✨","💜","⭐","📖","💚"];
+    return(
+      <Page>
+        <div style={{display:"flex",justifyContent:"center",paddingTop:8}}>
+          <div style={{...css.card,maxWidth:step===2?520:440}}>
+            <div style={{textAlign:"center",marginBottom:20}}>
+              <div style={{fontSize:42}}>{icons[step]}</div>
+              <h1 style={{margin:"8px 0 2px",fontSize:20,fontWeight:700,color:"#1f2937"}}>{L.steps[step]}</h1>
+              <p style={{margin:0,color:"#9ca3af",fontSize:13}}>{L.subs[step]}</p>
+            </div>
+
+            {step===0&&<>
+              <input type="number" min="2" max="12" placeholder={L.ageLabel} value={form.age}
+                onChange={e=>setForm(p=>({...p,age:e.target.value}))}
+                style={{...css.inp,fontSize:26,textAlign:"center",fontWeight:700,marginBottom:16}}/>
+              <button onClick={()=>setStep(1)} disabled={!canNext()} style={{...css.btn(),width:"100%",padding:14,fontSize:15,opacity:canNext()?1:.4}}>{L.cont} →</button>
+              <Prog n={1}/>
+            </>}
+
+            {step===1&&<>
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+                {L.genders.map(g=><button key={g} onClick={()=>setForm(p=>({...p,gender:g}))} style={{...css.pill(form.gender===g,"#9333ea"),textTransform:"capitalize",padding:12,fontSize:16}}>{g}</button>)}
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setStep(0)} style={{...css.btnBack,flex:1}}>← {L.back}</button>
+                <button onClick={()=>setStep(2)} disabled={!canNext()} style={{...css.btn(),flex:2,opacity:canNext()?1:.4}}>{L.cont} →</button>
+              </div>
+              <Prog n={2}/>
+            </>}
+
+            {step===2&&<>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+                {L.interests.map(i=><button key={i} onClick={()=>toggleInterest(i)} style={{...css.pill(form.interests.includes(i),"#ec4899"),padding:"8px 12px",fontSize:13}}>{i}</button>)}
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setStep(1)} style={{...css.btnBack,flex:1}}>← {L.back}</button>
+                <button onClick={()=>setStep(3)} disabled={!canNext()} style={{...css.btn(),flex:2,opacity:canNext()?1:.4}}>{L.cont} →</button>
+              </div>
+              <Prog n={3}/>
+            </>}
+
+            {step===3&&<>
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+                {L.styles.map(st=><button key={st.v} onClick={()=>setForm(p=>({...p,style:st.v}))}
+                  style={{...css.pill(form.style===st.v,"#f97316"),display:"flex",alignItems:"center",gap:12,padding:"10px 14px",textAlign:"left"}}>
+                  <span style={{fontSize:22}}>{st.e}</span>
+                  <div><div style={{fontWeight:700,fontSize:13}}>{st.l}</div><div style={{fontSize:11,opacity:.7}}>{st.d}</div></div>
+                </button>)}
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setStep(2)} style={{...css.btnBack,flex:1}}>← {L.back}</button>
+                <button onClick={()=>setStep(4)} disabled={!canNext()} style={{...css.btn(),flex:2,opacity:canNext()?1:.4}}>{L.cont} →</button>
+              </div>
+              <Prog n={4}/>
+            </>}
+
+            {step===4&&<>
+              <textarea ref={lessonRef} defaultValue={form.lesson} placeholder={L.lessonPH}
+                style={{...css.inp,height:96,resize:"none",fontSize:14,marginBottom:16}}/>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setStep(3)} style={{...css.btnBack,flex:1}}>← {L.back}</button>
+                <button onClick={generate} style={{...css.btn(true),flex:2}}>{L.createBtn} ✨</button>
+              </div>
+              <Prog n={5}/>
+            </>}
+          </div>
+        </div>
+      </Page>
+    );
   }
 
   // ── Story view ────────────────────────────────────────────────────────────
-  if(view==="story"&&story) return <Page>
-    <div style={{background:"#fff",borderRadius:24,boxShadow:"0 10px 40px rgba(0,0,0,.1)",overflow:"hidden"}}>
-      <div style={{background:GR,padding:20,textAlign:"center",color:"#fff"}}>
-        <div style={{fontSize:28}}>📖</div>
-        <h1 style={{margin:"4px 0 0",fontWeight:700,fontSize:18}}>{L.steps[6]}</h1>
-        <p style={{margin:"2px 0 0",fontSize:12,opacity:.8}}>{L.subs[6]} · {APIS.find(a=>a.id===story.usedApi)?.name||""}</p>
-      </div>
-      <div style={{padding:20}}>
-        <div style={{background:"#fffbeb",borderRadius:18,padding:20,borderLeft:"4px solid #fb923c",marginBottom:12,minHeight:80}}>
-          {displayed===""&&!animating
-            ?<p style={{color:"#9ca3af",fontSize:13,margin:0,fontStyle:"italic"}}>Pulsa {L.read} para leer</p>
-            :<p style={{margin:0,color:"#1f2937",lineHeight:1.8,whiteSpace:"pre-wrap",fontSize:14,fontFamily:"Georgia,serif"}}>
-                {displayed}{animating&&<span style={{display:"inline-block",width:8,height:16,background:"#fb923c",marginLeft:4,borderRadius:3,verticalAlign:"middle",animation:"pulse 1s infinite"}}/>}
-              </p>
-          }
+  if(view==="story"&&story)return(
+    <Page>
+      <div style={{background:"#fff",borderRadius:24,boxShadow:"0 10px 40px rgba(0,0,0,.1)",overflow:"hidden"}}>
+        <div style={{background:GR,padding:20,textAlign:"center",color:"#fff"}}>
+          <div style={{fontSize:28}}>📖</div>
+          <h1 style={{margin:"4px 0 0",fontWeight:700,fontSize:18}}>{L.steps[6]}</h1>
+          <p style={{margin:"2px 0 0",fontSize:12,opacity:.8}}>{APIS.find(a=>a.id===story.usedApi)?APIS.find(a=>a.id===story.usedApi).name:""}</p>
         </div>
-        <div style={{display:"flex",gap:8,marginBottom:16}}>
-          <button onClick={rewindAnim} style={{flex:1,padding:"8px 4px",borderRadius:14,background:"#f9fafb",border:"2px solid #e5e7eb",cursor:"pointer",fontWeight:700,fontSize:12,color:"#374151"}}>{L.rewind}</button>
-          {animating
-            ?<button onClick={pauseAnim} style={{flex:2,padding:"8px 12px",borderRadius:14,background:"#fff7ed",border:"2px solid #fed7aa",color:"#c2410c",fontWeight:700,cursor:"pointer",fontSize:12}}>{L.pause}</button>
-            :<button onClick={()=>startAnim(displayed?displayed.split(" ").length:0)}
-                style={{flex:2,padding:"8px 12px",borderRadius:14,background:"#eef2ff",border:"2px solid #c7d2fe",color:"#4338ca",fontWeight:700,cursor:"pointer",fontSize:12}}>{L.read}</button>
-          }
-          <button onClick={()=>{setDisplayed("");startAnim(0);}} style={{flex:1,padding:"8px 4px",borderRadius:14,background:"#f9fafb",border:"2px solid #e5e7eb",cursor:"pointer",fontWeight:700,fontSize:12,color:"#374151"}}>{L.restart}</button>
-        </div>
-        {/* Voice controls */}
-        {voices.length>0&&<div style={{marginBottom:16,padding:12,background:"#f5f3ff",borderRadius:16,display:"flex",flexDirection:"column",gap:8}}>
-          <select value={selVoice} onChange={e=>setSelVoice(e.target.value)}
-            style={{width:"100%",padding:"8px 10px",borderRadius:10,border:"1px solid #c4b5fd",fontSize:13,color:"#4c1d95",background:"#fff"}}>
-            <option value="">🎙 Voz automática ({langCode[lang]})</option>
-            {voicesForLang.map(v=><option key={v.voiceURI} value={v.voiceURI}>{v.name}</option>)}
-          </select>
-          <button onClick={()=>speak(story?.text||"")}
-            style={{padding:"10px",borderRadius:12,fontWeight:700,fontSize:13,cursor:"pointer",border:"2px solid",
-              ...(speaking?{background:"#fee2e2",color:"#991b1b",borderColor:"#fca5a5"}:{background:"#ede9fe",color:"#5b21b6",borderColor:"#c4b5fd"})}}>
-            {speaking?"⏹ Detener audio":"🔊 Escuchar con voz"}
-          </button>
-        </div>}
-        <div style={{textAlign:"center",color:"#818cf8",fontSize:13,marginBottom:16}}>⭐ {L.sweet} ⭐</div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={saveStory}
-            style={{flex:1,padding:12,borderRadius:16,fontWeight:700,fontSize:14,cursor:"pointer",
-              ...(savedMsg?{background:"#d1fae5",color:"#065f46",border:"2px solid #6ee7b7"}:{background:"#eef2ff",color:"#4338ca",border:"2px solid #c7d2fe"})}}>
-            {savedMsg?L.saved:L.save}
-          </button>
-          <button onClick={resetCreate}
-            style={{flex:1,padding:12,borderRadius:16,fontWeight:700,fontSize:14,border:"none",cursor:"pointer",...grBtn}}>
-            {L.again}
-          </button>
+        <div style={{padding:20}}>
+          <StoryBox text={story.text} img={imgUrl}/>
+          <ReadCtrl/>
+          <AudioCtrl text={story.text}/>
+          <div style={{textAlign:"center",color:"#818cf8",fontSize:13,marginBottom:16}}>⭐ {L.sweet} ⭐</div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={saveStory}
+              style={{flex:1,padding:12,borderRadius:16,fontWeight:700,fontSize:14,cursor:"pointer",
+                background:savedMsg?"#d1fae5":"#eef2ff",color:savedMsg?"#065f46":"#4338ca",border:"2px solid "+(savedMsg?"#6ee7b7":"#c7d2fe")}}>
+              {savedMsg?L.saved:L.save}
+            </button>
+            <button onClick={resetCreate} style={{...css.btn(),flex:1,padding:12}}>{L.again}</button>
+          </div>
         </div>
       </div>
-    </div>
-  </Page>;
+    </Page>
+  );
 
   return null;
 }
 
-ReactDOM.render(<App/>, document.getElementById("root"));
+ReactDOM.render(<App/>,document.getElementById("root"));
 </script>
 </body>
 </html>
