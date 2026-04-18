@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Test Audio + Imagen</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; background: #f5f3ff; }
+  h1 { color: #4f46e5; }
+  button { padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; font-size: 15px; margin: 6px; }
+  .btn-pri { background: linear-gradient(to right,#6366f1,#9333ea); color: #fff; }
+  .btn-sec { background: #ede9fe; color: #4f46e5; }
+  .btn-stop { background: #fee2e2; color: #991b1b; }
+  select { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #c4b5fd; font-size: 14px; margin: 8px 0; }
+  .box { background: #fff; border-radius: 16px; padding: 20px; margin: 16px 0; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+  .status { font-size: 13px; color: #6b7280; margin-top: 8px; min-height: 20px; }
+  img { width: 100%; border-radius: 12px; margin-top: 12px; }
+  .tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; margin: 2px; }
+  .ok  { background: #d1fae5; color: #065f46; }
+  .err { background: #fee2e2; color: #991b1b; }
+  .warn{ background: #fef3c7; color: #92400e; }
+</style>
+</head>
+<body>
+
+<h1>🔊 Test Audio + 🎨 Imagen</h1>
+
+<!-- ── DIAGNÓSTICO ─────────────────────────────── -->
+<div class="box">
+  <strong>Diagnóstico del navegador</strong>
+  <div id="diag" style="margin-top:10px"></div>
+</div>
+
+<!-- ── AUDIO ──────────────────────────────────── -->
+<div class="box">
+  <strong>🔊 Prueba de Audio (Web Speech API)</strong>
+  <div class="status" id="voiceCount"></div>
+  <select id="voiceSelect"><option value="">Cargando voces...</option></select>
+  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">
+    <button class="btn-pri" onclick="speak()">▶ Reproducir</button>
+    <button class="btn-stop" onclick="stopSpeak()">⏹ Detener</button>
+    <button class="btn-sec" onclick="testLang('es-ES')">🇪🇸 ES</button>
+    <button class="btn-sec" onclick="testLang('ca-ES')">🔴🟡 CA</button>
+    <button class="btn-sec" onclick="testLang('fr-FR')">🇫🇷 FR</button>
+    <button class="btn-sec" onclick="testLang('en-GB')">🇬🇧 EN</button>
+    <button class="btn-sec" onclick="testLang('pt-PT')">🇵🇹 PT</button>
+  </div>
+  <div class="status" id="audioStatus"></div>
+</div>
+
+<!-- ── IMAGEN ─────────────────────────────────── -->
+<div class="box">
+  <strong>🎨 Prueba de Imagen (Pollinations.ai)</strong>
+  <p style="font-size:13px;color:#6b7280;margin:4px 0 12px">Sin key, sin registro — genera imagen de un cuento.</p>
+  <button class="btn-pri" onclick="generateImage()">🎨 Generar imagen de prueba</button>
+  <div class="status" id="imgStatus"></div>
+  <div id="imgContainer"></div>
+</div>
+
+<script>
+// ── Diagnóstico ───────────────────────────────────────────────────────────────
+const diag = document.getElementById('diag');
+const checks = [
+  ['Web Speech API', 'speechSynthesis' in window],
+  ['SpeechSynthesisUtterance', 'SpeechSynthesisUtterance' in window],
+  ['Fetch API', 'fetch' in window],
+  ['HTTPS / localhost', location.protocol === 'https:' || location.hostname === 'localhost'],
+];
+checks.forEach(([name, ok]) => {
+  diag.innerHTML += `<span class="tag ${ok?'ok':'err'}">${ok?'✓':'✗'} ${name}</span> `;
+});
+
+// ── Voces ─────────────────────────────────────────────────────────────────────
+let voices = [];
+const sel = document.getElementById('voiceSelect');
+const voiceCount = document.getElementById('voiceCount');
+
+function loadVoices() {
+  voices = window.speechSynthesis.getVoices();
+  sel.innerHTML = '';
+  if (voices.length === 0) {
+    sel.innerHTML = '<option>No se encontraron voces</option>';
+    voiceCount.textContent = '⚠️ Sin voces. Intenta en Chrome o Safari.';
+    voiceCount.style.color = '#d97706';
+    return;
+  }
+  voiceCount.textContent = `✅ ${voices.length} voces encontradas`;
+  voiceCount.style.color = '#059669';
+  voices.forEach((v, i) => {
+    const o = document.createElement('option');
+    o.value = i;
+    o.textContent = `${v.name} (${v.lang})`;
+    sel.appendChild(o);
+  });
+  // Auto-seleccionar primera voz española
+  const esIdx = voices.findIndex(v => v.lang.startsWith('es'));
+  if (esIdx >= 0) sel.value = esIdx;
+}
+
+if ('speechSynthesis' in window) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+  // Chrome necesita un pequeño delay
+  setTimeout(loadVoices, 500);
+}
+
+const texto = "Érase una vez, en un bosque mágico lleno de estrellas, una pequeña niña llamada Luna que descubrió que ser valiente no significa no tener miedo, sino seguir adelante a pesar de él.";
+
+function speak() {
+  if (!('speechSynthesis' in window)) {
+    document.getElementById('audioStatus').textContent = '❌ Web Speech API no disponible';
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(texto);
+  utt.rate = 0.88;
+  utt.pitch = 1.05;
+  const idx = parseInt(sel.value);
+  if (!isNaN(idx) && voices[idx]) utt.voice = voices[idx];
+  utt.onstart  = () => document.getElementById('audioStatus').textContent = '▶ Reproduciendo...';
+  utt.onend    = () => document.getElementById('audioStatus').textContent = '✅ Audio completado';
+  utt.onerror  = (e) => document.getElementById('audioStatus').textContent = '❌ Error: ' + e.error;
+  window.speechSynthesis.speak(utt);
+}
+
+function stopSpeak() {
+  window.speechSynthesis.cancel();
+  document.getElementById('audioStatus').textContent = '⏹ Detenido';
+}
+
+function testLang(lang) {
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(texto);
+  utt.lang = lang;
+  utt.rate = 0.88;
+  const match = voices.find(v => v.lang.startsWith(lang.slice(0,2)));
+  if (match) { utt.voice = match; document.getElementById('audioStatus').textContent = `▶ Voz: ${match.name}`; }
+  else document.getElementById('audioStatus').textContent = `⚠️ Sin voz para ${lang}, usando default`;
+  utt.onend = () => document.getElementById('audioStatus').textContent = '✅ Completado';
+  utt.onerror = (e) => document.getElementById('audioStatus').textContent = '❌ Error: ' + e.error;
+  window.speechSynthesis.speak(utt);
+}
+
+// ── Imagen Pollinations ───────────────────────────────────────────────────────
+function generateImage() {
+  const status = document.getElementById('imgStatus');
+  const container = document.getElementById('imgContainer');
+  status.textContent = '⏳ Generando imagen...';
+  container.innerHTML = '';
+
+  const prompt = encodeURIComponent('A magical forest at night with stars, a little girl named Luna, fairy tale illustration, soft colors, children book style');
+  const url = `https://image.pollinations.ai/prompt/${prompt}?width=512&height=512&seed=${Math.floor(Math.random()*9999)}&nologo=true`;
+
+  const img = document.createElement('img');
+  img.src = url;
+  img.onload  = () => { status.textContent = '✅ Imagen generada con Pollinations.ai (sin key)'; };
+  img.onerror = () => { status.textContent = '❌ Error al generar imagen — verifica conexión'; };
+  container.appendChild(img);
+}
+</script>
+</body>
+</html>

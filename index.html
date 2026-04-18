@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cuentos de Buenas Noches 🌙</title>
+<title>🔊 Test Audio + Imagen</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
@@ -44,36 +44,6 @@ const ADMIN_UID = "wckbwmRajrRwKPGczB26V5g1XzP2";
 // ── APIs ──────────────────────────────────────────────────────────────────────
 const APIS = [
   {
-    id:"anthropic", name:"Claude Haiku",
-    free:"$5 crédito (~500 cuentos)", docsUrl:"https://console.anthropic.com",
-    call: async (prompt, key) => {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST",
-        headers:{"Content-Type":"application/json","x-api-key":key,
-          "anthropic-version":"2023-06-01",
-          "anthropic-dangerous-direct-browser-ipc-access":"true"},
-        body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:1000,
-          messages:[{role:"user",content:prompt}]})
-      });
-      const d = await r.json();
-      if(d.error) throw new Error(d.error.message);
-      return d.content?.[0]?.text||"";
-    }
-  },
-  {
-    id:"gemini", name:"Gemini Flash",
-    free:"15 req/min gratis", docsUrl:"https://aistudio.google.com",
-    call: async (prompt, key) => {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
-      });
-      const d = await r.json();
-      if(d.error) throw new Error(d.error.message);
-      return d.candidates?.[0]?.content?.parts?.[0]?.text||"";
-    }
-  },
-  {
     id:"groq", name:"Groq Llama 3.3",
     free:"14.400 req/día gratis", docsUrl:"https://console.groq.com",
     call: async (prompt, key) => {
@@ -87,6 +57,24 @@ const APIS = [
       if(d.error) throw new Error(d.error.message);
       return d.choices?.[0]?.message?.content||"";
     }
+  },
+  {
+    id:"gemini", name:"Gemini Flash",
+    free:"15 req/min gratis", docsUrl:"https://aistudio.google.com",
+    call: async (prompt, key) => {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+      });
+      const d = await r.json();
+      if(d.error) throw new Error(d.error.message);
+      return d.candidates?.[0]?.content?.parts?.[0]?.text||"";
+    }
+  },
+  {
+    id:"anthropic", name:"Claude Haiku (proxy)",
+    free:"Solo via proxy", docsUrl:"https://console.anthropic.com",
+    call: async () => { throw new Error("Anthropic requiere proxy — usa Groq o Gemini"); }
   }
 ];
 
@@ -209,8 +197,33 @@ function App() {
   const [adminSaved,setAdminSaved]=useState(false);
   const [preferredApi,setPreferredApi]=useState("anthropic");
 
-  const animRef  = useRef(null);
+  const animRef   = useRef(null);
   const lessonRef = useRef(null);
+  const [voices, setVoices]     = useState([]);
+  const [selVoice, setSelVoice] = useState("");
+  const [speaking, setSpeaking] = useState(false);
+
+  useEffect(()=>{
+    const load = ()=>{ const v=window.speechSynthesis.getVoices(); if(v.length) setVoices(v); };
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
+  },[]);
+
+  const langCode = {es:"es",ca:"ca",fr:"fr",en:"en",pt:"pt"};
+  const voicesForLang = voices.filter(v=>v.lang.startsWith(langCode[lang]||"es"));
+
+  const speak = (text)=>{
+    if(!window.speechSynthesis) return;
+    if(speaking){ window.speechSynthesis.cancel(); setSpeaking(false); return; }
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.rate = 0.88; utt.pitch = 1.05;
+    const chosen = voices.find(v=>v.voiceURI===selVoice) || voicesForLang[0];
+    if(chosen) utt.voice = chosen;
+    utt.onend = ()=>setSpeaking(false);
+    utt.onerror = ()=>setSpeaking(false);
+    window.speechSynthesis.speak(utt);
+    setSpeaking(true);
+  };
   const L = LANGS[lang];
   const isAdmin = user?.uid===ADMIN_UID;
 
@@ -725,6 +738,19 @@ function App() {
           }
           <button onClick={()=>{setDisplayed("");startAnim(0);}} style={{flex:1,padding:"8px 4px",borderRadius:14,background:"#f9fafb",border:"2px solid #e5e7eb",cursor:"pointer",fontWeight:700,fontSize:12,color:"#374151"}}>{L.restart}</button>
         </div>
+        {/* Voice controls */}
+        {voices.length>0&&<div style={{marginBottom:16,padding:12,background:"#f5f3ff",borderRadius:16,display:"flex",flexDirection:"column",gap:8}}>
+          <select value={selVoice} onChange={e=>setSelVoice(e.target.value)}
+            style={{width:"100%",padding:"8px 10px",borderRadius:10,border:"1px solid #c4b5fd",fontSize:13,color:"#4c1d95",background:"#fff"}}>
+            <option value="">🎙 Voz automática ({langCode[lang]})</option>
+            {voicesForLang.map(v=><option key={v.voiceURI} value={v.voiceURI}>{v.name}</option>)}
+          </select>
+          <button onClick={()=>speak(story?.text||"")}
+            style={{padding:"10px",borderRadius:12,fontWeight:700,fontSize:13,cursor:"pointer",border:"2px solid",
+              ...(speaking?{background:"#fee2e2",color:"#991b1b",borderColor:"#fca5a5"}:{background:"#ede9fe",color:"#5b21b6",borderColor:"#c4b5fd"})}}>
+            {speaking?"⏹ Detener audio":"🔊 Escuchar con voz"}
+          </button>
+        </div>}
         <div style={{textAlign:"center",color:"#818cf8",fontSize:13,marginBottom:16}}>⭐ {L.sweet} ⭐</div>
         <div style={{display:"flex",gap:8}}>
           <button onClick={saveStory}
